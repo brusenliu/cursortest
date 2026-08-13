@@ -1,0 +1,2 @@
+# cursor
+test cursor AI
