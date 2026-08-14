@@ -1,0 +1,20 @@
+[Unit]
+Description=Personal daily news digest Telegram bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=newsbot
+Group=newsbot
+WorkingDirectory=/opt/newsbot
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/etc/newsbot.env
+ExecStart=/opt/newsbot/.venv/bin/python -m newsbot
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
