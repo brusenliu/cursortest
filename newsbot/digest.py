@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 from newsbot.config import Settings
 from newsbot.db import Store
+from newsbot.english import EnglishPlan, lesson_for_date, render_english_html, render_english_plain
 from newsbot.fetcher import Article, fetch_articles, format_age
 from newsbot.markets import MarketSnapshot, change_color, fetch_markets, format_change
 from newsbot.summarize import clean_summary, llm_summaries
@@ -27,6 +28,7 @@ class DigestResult:
     messages: list[str] = field(default_factory=list)
     markets: MarketSnapshot | None = None
     translations: dict[str, str] = field(default_factory=dict)
+    english: EnglishPlan | None = None
 
 
 def _pick(articles: list[Article], limit: int) -> list[Article]:
@@ -126,6 +128,7 @@ async def build_digest(
     now = datetime.now(tz)
     today = now.strftime("%Y-%m-%d")
     today_label = _today_label(now)
+    english = lesson_for_date(now.date())
     header = f"<b>每日资讯 {today_label}</b>"
     if skipped:
         header += f"\n<i>未拉取到：{html.escape('、'.join(skipped))}</i>"
@@ -143,8 +146,19 @@ async def build_digest(
                 skipped=skipped,
                 messages=last.split("\n\n---SPLIT---\n\n"),
                 markets=markets,
+                english=english,
             )
-        return DigestResult(today, today_label, [], {}, skipped, [text], markets, translations)
+        return DigestResult(
+            today,
+            today_label,
+            [],
+            {},
+            skipped,
+            [text],
+            markets,
+            translations,
+            english,
+        )
 
     sections: list[str] = []
     for category in settings.categories:
@@ -161,7 +175,17 @@ async def build_digest(
         store.mark_many([(item.url, item.title, item.category_id) for item in selected])
         store.set_kv("last_digest", "\n\n---SPLIT---\n\n".join(messages))
         store.set_kv("last_digest_date", today)
-    return DigestResult(today, today_label, selected, summaries, skipped, messages, markets, translations)
+    return DigestResult(
+        today,
+        today_label,
+        selected,
+        summaries,
+        skipped,
+        messages,
+        markets,
+        translations,
+        english,
+    )
 
 
 def grouped_items(settings: Settings, result: DigestResult) -> list[tuple[str, list[Article]]]:
@@ -184,7 +208,10 @@ def _market_table_html(title: str, quotes) -> str:
         """
     body = []
     for quote in quotes:
-        price = f"{quote.price:.2f}" if quote.price is not None else "—"
+        if quote.unit:
+            price = f"{quote.price:.2f} {quote.unit}" if quote.price is not None else "—"
+        else:
+            price = f"{quote.price:.2f}" if quote.price is not None else "—"
         change = format_change(quote.change_pct)
         color = change_color(quote.change_pct)
         body.append(
@@ -226,8 +253,10 @@ def render_email(settings: Settings, result: DigestResult) -> tuple[str, str, st
     translations = result.translations
 
     intro = f"共 {total} 条资讯"
-    if result.markets and (result.markets.us or result.markets.china):
+    if result.markets and (result.markets.us or result.markets.china or result.markets.gold):
         intro += " · 含行情"
+    if result.english:
+        intro += " · 含英文计划"
     if result.skipped:
         intro += f" · 未拉取到：{'、'.join(result.skipped)}"
 
@@ -244,6 +273,16 @@ def render_email(settings: Settings, result: DigestResult) -> tuple[str, str, st
             for quote in markets.us:
                 price = f"{quote.price:.2f}" if quote.price is not None else "—"
                 plain_lines.append(f"{quote.name}({quote.code})  {price}  {format_change(quote.change_pct)}")
+            plain_lines.append("")
+        if markets.gold:
+            sections_html.append(_market_table_html("黄金", markets.gold))
+            plain_lines.append("【黄金】")
+            for quote in markets.gold:
+                price = f"{quote.price:.2f}" if quote.price is not None else "—"
+                unit = f" {quote.unit}" if quote.unit else ""
+                plain_lines.append(
+                    f"{quote.name}({quote.code})  {price}{unit}  {format_change(quote.change_pct)}"
+                )
             plain_lines.append("")
         if markets.china:
             sections_html.append(_market_table_html("国内主要板块", markets.china))
@@ -302,6 +341,10 @@ def render_email(settings: Settings, result: DigestResult) -> tuple[str, str, st
                 plain_lines.append(f"   {article.url}")
                 plain_lines.append("")
             sections_html.append("".join(rows))
+
+    if result.english:
+        sections_html.append(render_english_html(result.english))
+        plain_lines.extend(render_english_plain(result.english))
 
     html_body = f"""<!DOCTYPE html>
 <html lang="zh-CN">

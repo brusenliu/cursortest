@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 
@@ -46,6 +47,13 @@ CN_BOARDS = [
     ("90.BK0478", "有色金属"),
 ]
 
+# Spot / domestic gold references on East Money.
+GOLD_QUOTES = [
+    ("122.XAU", "伦敦金", "XAU"),
+    ("118.AU9999", "黄金9999", "AU9999"),
+    ("90.BK1617", "黄金板块", "BK1617"),
+]
+
 
 @dataclass
 class Quote:
@@ -53,12 +61,14 @@ class Quote:
     name: str
     price: float | None
     change_pct: float | None
+    unit: str = ""
 
 
 @dataclass
 class MarketSnapshot:
     us: list[Quote]
     china: list[Quote]
+    gold: list[Quote]
     note: str = ""
 
 
@@ -72,15 +82,25 @@ def _num(value) -> float | None:
 
 
 async def _fetch_ulist(client: httpx.AsyncClient, secids: str) -> dict[str, dict]:
-    response = await client.get(
+    params = {"fltt": 2, "fields": "f12,f14,f2,f3,f4", "secids": secids}
+    hosts = (
         "https://push2.eastmoney.com/api/qt/ulist.np/get",
-        params={"fltt": 2, "fields": "f12,f14,f2,f3,f4", "secids": secids},
-        timeout=20,
+        "https://push2delay.eastmoney.com/api/qt/ulist.np/get",
     )
-    response.raise_for_status()
-    payload = response.json()
-    rows = ((payload.get("data") or {}).get("diff")) or []
-    return {str(row.get("f12")): row for row in rows}
+    last_error: Exception | None = None
+    for host in hosts:
+        for attempt in range(2):
+            try:
+                response = await client.get(host, params=params, timeout=20)
+                response.raise_for_status()
+                payload = response.json()
+                rows = ((payload.get("data") or {}).get("diff")) or []
+                return {str(row.get("f12")): row for row in rows}
+            except Exception as exc:
+                last_error = exc
+                await asyncio.sleep(0.4 * (attempt + 1))
+    assert last_error is not None
+    raise last_error
 
 
 async def fetch_markets() -> MarketSnapshot:
@@ -89,6 +109,7 @@ async def fetch_markets() -> MarketSnapshot:
     notes: list[str] = []
     us: list[Quote] = []
     china: list[Quote] = []
+    gold: list[Quote] = []
 
     async with httpx.AsyncClient(headers=UA, follow_redirects=True) as client:
         try:
@@ -105,6 +126,7 @@ async def fetch_markets() -> MarketSnapshot:
                         name=name,
                         price=_num(row.get("f2")),
                         change_pct=_num(row.get("f3")),
+                        unit="USD",
                     )
                 )
         except Exception as exc:
@@ -134,7 +156,28 @@ async def fetch_markets() -> MarketSnapshot:
             log.warning("China board quotes failed: %s", exc)
             notes.append("A股板块行情暂时无法获取")
 
-    return MarketSnapshot(us=us, china=china, note="；".join(notes))
+        try:
+            data = await _fetch_ulist(client, ",".join(code for code, _, _ in GOLD_QUOTES))
+            for code, fallback, display in GOLD_QUOTES:
+                symbol = code.split(".", 1)[1]
+                row = data.get(symbol)
+                if not row:
+                    continue
+                unit = "USD/oz" if symbol == "XAU" else ("元/克" if symbol.startswith("AU") else "")
+                gold.append(
+                    Quote(
+                        code=display,
+                        name=fallback,
+                        price=_num(row.get("f2")),
+                        change_pct=_num(row.get("f3")),
+                        unit=unit,
+                    )
+                )
+        except Exception as exc:
+            log.warning("Gold quotes failed: %s", exc)
+            notes.append("黄金行情暂时无法获取")
+
+    return MarketSnapshot(us=us, china=china, gold=gold, note="；".join(notes))
 
 
 def format_change(pct: float | None) -> str:
