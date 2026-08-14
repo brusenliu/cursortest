@@ -7,7 +7,7 @@ request_timeout_seconds: 15
 categories:
   - id: tech
     name: 科技
-    max_items: 8
+    max_items: 6
     feeds:
       - name: Hacker News
         url: https://hnrss.org/frontpage
@@ -18,7 +18,7 @@ categories:
 
   - id: china
     name: 国内
-    max_items: 8
+    max_items: 5
     feeds:
       - name: 36氪
         url: https://36kr.com/feed
@@ -29,7 +29,7 @@ categories:
 
   - id: world
     name: 国际
-    max_items: 6
+    max_items: 4
     feeds:
       - name: BBC World
         url: https://feeds.bbci.co.uk/news/world/rss.xml

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from time import mktime
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import feedparser
 import httpx
@@ -49,14 +50,35 @@ def _entry_time(entry: object) -> float:
     return time.time()
 
 
+TRACKING_PARAMS = {
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "at_medium",
+    "at_campaign",
+}
+
+
+def _clean_url(url: str) -> str:
+    parts = urlsplit(url)
+    query = [
+        (key, value)
+        for key, value in parse_qsl(parts.query, keep_blank_values=True)
+        if key.lower() not in TRACKING_PARAMS
+    ]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), ""))
+
+
 def _entry_link(entry: object) -> str:
     link = str(getattr(entry, "link", "") or "").strip()
     if link:
-        return link
+        return _clean_url(link)
     for item in getattr(entry, "links", []) or []:
         href = str(item.get("href") or "").strip()
         if href:
-            return href
+            return _clean_url(href)
     return ""
 
 

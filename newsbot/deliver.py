@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 from newsbot.config import Settings
 from newsbot.db import Store
-from newsbot.digest import build_digest, render_email
+from newsbot.digest import DigestResult, build_digest, render_email
 from newsbot.mailer import send_email
 
 log = logging.getLogger("newsbot.deliver")
@@ -19,17 +19,23 @@ async def deliver_digest(
     *,
     mark_seen: bool = True,
     force_mail: bool = False,
+    ignore_seen: bool = False,
     telegram_bot=None,
-) -> tuple[list[str], int, list[str]]:
-    messages, selected, skipped = await build_digest(settings, store, mark_seen=False)
+) -> DigestResult:
+    result = await build_digest(
+        settings,
+        store,
+        mark_seen=False,
+        ignore_seen=ignore_seen,
+    )
     today = datetime.now(ZoneInfo(settings.timezone)).strftime("%Y-%m-%d")
-    subject, html = render_email(messages, today)
+    subject, html, plain = render_email(settings, result)
 
     mailed = False
-    if settings.mail_enabled and (force_mail or selected):
+    if settings.mail_enabled and (force_mail or result.selected):
         already = store.get_kv("last_mail_date")
         if force_mail or already != today:
-            await asyncio.to_thread(send_email, settings, subject, html)
+            await asyncio.to_thread(send_email, settings, subject, html, plain)
             store.set_kv("last_mail_date", today)
             mailed = True
         else:
@@ -44,7 +50,7 @@ async def deliver_digest(
             from telegram.constants import ParseMode
 
             for chat_id in chat_ids:
-                for message in messages:
+                for message in result.messages:
                     await telegram_bot.send_message(
                         chat_id=chat_id,
                         text=message,
@@ -53,16 +59,16 @@ async def deliver_digest(
                     )
             telegram_sent = True
 
-    if mark_seen and selected and (mailed or telegram_sent or not settings.mail_enabled):
-        store.mark_many([(item.url, item.title, item.category_id) for item in selected])
-        store.set_kv("last_digest", "\n\n---SPLIT---\n\n".join(messages))
+    if mark_seen and result.selected and (mailed or telegram_sent or not settings.mail_enabled):
+        store.mark_many([(item.url, item.title, item.category_id) for item in result.selected])
+        store.set_kv("last_digest", "\n\n---SPLIT---\n\n".join(result.messages))
         store.set_kv("last_digest_date", today)
 
     log.info(
         "delivered items=%s skipped=%s mailed=%s telegram=%s",
-        len(selected),
-        skipped,
+        len(result.selected),
+        result.skipped,
         mailed,
         telegram_sent,
     )
-    return messages, len(selected), skipped
+    return result

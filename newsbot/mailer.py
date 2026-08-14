@@ -49,7 +49,7 @@ def resolve_smtp(settings: Settings) -> tuple[str, int, str]:
     )
 
 
-def send_email(settings: Settings, subject: str, html_body: str) -> None:
+def send_email(settings: Settings, subject: str, html_body: str, plain_body: str = "") -> None:
     if not settings.mail_enabled:
         raise RuntimeError("邮件未配置：需要 MAIL_TO 和 SMTP_PASSWORD")
     host, port, security = resolve_smtp(settings)
@@ -60,6 +60,8 @@ def send_email(settings: Settings, subject: str, html_body: str) -> None:
     msg["Subject"] = subject
     msg["From"] = formataddr(("每日资讯", from_addr))
     msg["To"] = ", ".join(recipients)
+    if plain_body:
+        msg.attach(MIMEText(plain_body, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     log.info("sending mail via %s:%s (%s) to %s", host, port, security, recipients)

@@ -76,9 +76,8 @@ class NewsBot:
             return
         await update.message.reply_text("正在整理今日资讯…")
         try:
-            messages, selected, skipped = await build_digest(self.settings, self.store)
-            await self.send_chunks(context.bot, chat.id, messages)
-            log.info("sent /today items=%s skipped=%s", len(selected), skipped)
+            result = await deliver_digest(self.settings, self.store, telegram_bot=context.bot)
+            log.info("sent /today items=%s skipped=%s", len(result.selected), result.skipped)
         except Exception:
             log.exception("failed to build /today digest")
             await update.message.reply_text("整理失败，请查看服务器日志。")

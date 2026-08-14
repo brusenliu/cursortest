@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from newsbot.config import load_settings
 from newsbot.db import Store
 from newsbot.deliver import deliver_digest
-from newsbot.digest import build_digest
+from newsbot.digest import build_digest, render_email
 
 
 def _configure_logging() -> None:
@@ -44,11 +44,11 @@ async def print_digest() -> None:
     settings = _writable_settings()
     store = Store(settings.db_path)
     try:
-        messages, selected, skipped = await build_digest(settings, store, mark_seen=False)
-        print(f"# items={len(selected)} skipped={skipped}\n")
-        for message in messages:
-            print(message)
-            print("\n----\n")
+        result = await build_digest(settings, store, mark_seen=False, ignore_seen=True)
+        print(f"# items={len(result.selected)} skipped={result.skipped}\n")
+        _, html, plain = render_email(settings, result)
+        print(plain)
+        print("\n---- html bytes", len(html), "----\n")
     finally:
         store.close()
 
@@ -59,8 +59,8 @@ async def send_now() -> None:
         raise SystemExit("未配置邮件或 Telegram：请设置 MAIL_TO 与 SMTP_PASSWORD")
     store = Store(settings.db_path)
     try:
-        messages, count, skipped = await deliver_digest(settings, store, force_mail=True)
-        print(f"sent items={count} skipped={skipped} parts={len(messages)}")
+        result = await deliver_digest(settings, store, force_mail=True, ignore_seen=True)
+        print(f"sent items={len(result.selected)} skipped={result.skipped} parts={len(result.messages)}")
     finally:
         store.close()
 

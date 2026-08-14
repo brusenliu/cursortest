@@ -15,6 +15,18 @@ log = logging.getLogger("newsbot.summarize")
 TAG_RE = re.compile(r"<[^>]+>")
 SPACE_RE = re.compile(r"\s+")
 SENTENCE_RE = re.compile(r"(.+?[。！？.!?])", re.S)
+URL_RE = re.compile(r"https?://\S+", re.I)
+NOISE_RE = re.compile(
+    r"(article url|comments url|comments|link)[:：]?",
+    re.I,
+)
+STATS_RE = re.compile(
+    r"points\s*:\s*\d+(?:\s*#\s*(?:comments\s*:)?\s*\d+)?(?:\s*#\s*comments\s*:\s*\d+)?",
+    re.I,
+)
+LEAD_RE = re.compile(
+    r"^(IT之家|36氪|新浪|澎湃|少数派|Solidot).{0,24}(?:消息|报道)[，,：:]\s*",
+)
 
 
 def strip_html(text: str) -> str:
@@ -23,8 +35,19 @@ def strip_html(text: str) -> str:
     return SPACE_RE.sub(" ", text).strip()
 
 
-def rule_summary(text: str, max_len: int = 80) -> str:
+def clean_summary(text: str, title: str = "", max_len: int = 72) -> str:
     cleaned = strip_html(text)
+    cleaned = URL_RE.sub(" ", cleaned)
+    cleaned = NOISE_RE.sub(" ", cleaned)
+    cleaned = STATS_RE.sub(" ", cleaned)
+    cleaned = LEAD_RE.sub("", cleaned)
+    cleaned = SPACE_RE.sub(" ", cleaned).strip(" -—|·,，:：")
+    if not cleaned or cleaned.lower() in {"points", "comments"} or cleaned.lower().startswith("points"):
+        return ""
+    title_norm = SPACE_RE.sub(" ", title or "").strip()
+    if title_norm and (cleaned == title_norm or cleaned.startswith(title_norm)):
+        rest = cleaned[len(title_norm) :].lstrip(" ：:-—。.")
+        cleaned = rest or ""
     if not cleaned:
         return ""
     match = SENTENCE_RE.search(cleaned)
@@ -32,6 +55,10 @@ def rule_summary(text: str, max_len: int = 80) -> str:
     if len(snippet) > max_len:
         return snippet[: max_len - 1].rstrip() + "…"
     return snippet
+
+
+def rule_summary(text: str, max_len: int = 80) -> str:
+    return clean_summary(text, max_len=max_len)
 
 
 async def llm_summaries(settings: Settings, articles: list[Article]) -> dict[str, str]:
@@ -42,7 +69,7 @@ async def llm_summaries(settings: Settings, articles: list[Article]) -> dict[str
             "id": index,
             "title": article.title,
             "source": article.source,
-            "snippet": rule_summary(article.summary, 180) or article.title,
+            "snippet": clean_summary(article.summary, article.title, 180) or article.title,
         }
         for index, article in enumerate(articles)
     ]
@@ -78,7 +105,7 @@ async def llm_summaries(settings: Settings, articles: list[Article]) -> dict[str
             index = int(item["id"])
             summary = str(item.get("summary") or "").strip()
             if 0 <= index < len(articles) and summary:
-                result[articles[index].url] = rule_summary(summary, 40)
+                result[articles[index].url] = clean_summary(summary, max_len=40)
         return result
     except Exception as exc:
         log.warning("LLM summarize failed, falling back to RSS snippets: %s", exc)
