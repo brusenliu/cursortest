@@ -41,11 +41,14 @@ LLM_API_KEY=
 LLM_BASE_URL=https://api.deepseek.com
 LLM_MODEL=deepseek-chat
 EOF
-  chmod 600 "$ENV_FILE"
-  echo "created $ENV_FILE — fill TELEGRAM_BOT_TOKEN (and TELEGRAM_CHAT_ID) then restart"
+  chown root:newsbot "$ENV_FILE"
+chmod 640 "$ENV_FILE"
+echo "created $ENV_FILE — fill TELEGRAM_BOT_TOKEN (and TELEGRAM_CHAT_ID) then restart"
 fi
 
 chown -R newsbot:newsbot "$INSTALL_DIR" "$DB_DIR"
+chown root:newsbot "$ENV_FILE"
+chmod 640 "$ENV_FILE"
 chmod 750 "$INSTALL_DIR" "$DB_DIR"
 
 install -m 644 "$ROOT/deploy/newsbot.service" /etc/systemd/system/newsbot.service

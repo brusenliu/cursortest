@@ -9,6 +9,7 @@ User=newsbot
 Group=newsbot
 WorkingDirectory=/opt/newsbot
 Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/newsbot
 EnvironmentFile=/etc/newsbot.env
 ExecStart=/opt/newsbot/.venv/bin/python -m newsbot
 Restart=on-failure

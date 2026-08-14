@@ -24,7 +24,10 @@ def _configure_logging() -> None:
 def _load_env() -> None:
     for candidate in (Path("/etc/newsbot.env"), Path(".env")):
         if candidate.exists():
-            load_dotenv(candidate, override=False)
+            try:
+                load_dotenv(candidate, override=False)
+            except OSError as exc:
+                logging.getLogger("newsbot").warning("skip env file %s: %s", candidate, exc)
 
 
 async def print_digest() -> None:
