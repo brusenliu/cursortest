@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-NETDATA_SNIPPET_SRC="$ROOT/deploy/netdata.conf.snippet"
-NGINX_SNIPPET_SRC="$ROOT/deploy/nginx-monitor.conf"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [[ -f "$SCRIPT_DIR/netdata.conf.snippet" ]]; then
+  NETDATA_SNIPPET_SRC="$SCRIPT_DIR/netdata.conf.snippet"
+  NGINX_SNIPPET_SRC="$SCRIPT_DIR/nginx-monitor.conf"
+elif [[ -f "$SCRIPT_DIR/deploy/netdata.conf.snippet" ]]; then
+  NETDATA_SNIPPET_SRC="$SCRIPT_DIR/deploy/netdata.conf.snippet"
+  NGINX_SNIPPET_SRC="$SCRIPT_DIR/deploy/nginx-monitor.conf"
+else
+  echo "cannot find netdata/nginx snippet files next to $0" >&2
+  exit 1
+fi
 NETDATA_DROPIN="/etc/netdata/netdata.conf.d/lowmem.conf"
 NGINX_SNIPPET="/etc/nginx/snippets/monitor-location.conf"
 HTPASSWD_FILE="/etc/nginx/.htpasswd-monitor"
@@ -30,6 +38,20 @@ fi
 echo "==> Applying low-memory Netdata config..."
 mkdir -p /etc/netdata/netdata.conf.d
 install -m 644 "$NETDATA_SNIPPET_SRC" "$NETDATA_DROPIN"
+NETDATA_MARKER="# newsbot-lowmem-config"
+if ! grep -q "$NETDATA_MARKER" /etc/netdata/netdata.conf 2>/dev/null; then
+  cat >>/etc/netdata/netdata.conf <<EOF
+
+[db]
+    update every = 2s
+    dbengine page cache size = 32MiB
+    dbengine multihost disk space = 256MiB
+
+[web]
+    bind to = localhost
+${NETDATA_MARKER}
+EOF
+fi
 systemctl enable netdata
 systemctl restart netdata
 
