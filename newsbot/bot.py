@@ -10,7 +10,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from newsbot.config import Settings
 from newsbot.db import Store
-from newsbot.digest import build_digest
+from newsbot.deliver import deliver_digest
 
 log = logging.getLogger("newsbot.bot")
 
@@ -84,26 +84,13 @@ class NewsBot:
             await update.message.reply_text("整理失败，请查看服务器日志。")
 
     async def daily_job(self, context: ContextTypes.DEFAULT_TYPE) -> None:
-        chat_ids = self.settings.allowed_chat_ids
-        if not chat_ids:
-            log.warning("daily job skipped: TELEGRAM_CHAT_ID is empty")
-            return
         try:
-            messages, selected, skipped = await build_digest(self.settings, self.store)
+            await deliver_digest(self.settings, self.store, telegram_bot=context.bot)
         except Exception:
             log.exception("daily digest failed")
-            return
-        for chat_id in chat_ids:
-            try:
-                await self.send_chunks(context.bot, chat_id, messages)
-            except Exception:
-                log.exception("failed to send daily digest to %s", chat_id)
-        log.info("daily digest sent items=%s skipped=%s", len(selected), skipped)
 
 
 def build_application(settings: Settings, store: Store) -> Application:
-    if not settings.telegram_bot_token:
-        raise SystemExit("TELEGRAM_BOT_TOKEN is required")
     newsbot = NewsBot(settings, store)
     application = Application.builder().token(settings.telegram_bot_token).build()
     application.add_handler(CommandHandler("start", newsbot.start))

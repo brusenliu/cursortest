@@ -35,6 +35,13 @@ class Settings:
     categories: list[Category]
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
+    mail_to: str = ""
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 0
+    smtp_from: str = ""
+    smtp_security: str = ""
     llm_api_key: str = ""
     llm_base_url: str = "https://api.deepseek.com"
     llm_model: str = "deepseek-chat"
@@ -47,6 +54,14 @@ class Settings:
         if not raw:
             return set()
         return {int(part.strip()) for part in raw.split(",") if part.strip()}
+
+    @property
+    def mail_recipients(self) -> list[str]:
+        return [part.strip() for part in self.mail_to.split(",") if part.strip()]
+
+    @property
+    def mail_enabled(self) -> bool:
+        return bool(self.mail_recipients and self.smtp_password)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -75,6 +90,11 @@ def load_settings(feeds_path: Path | None = None) -> Settings:
             )
         )
     db_path = Path(os.environ.get("NEWSBOT_DB", "/var/lib/newsbot/seen.sqlite"))
+    mail_to = os.environ.get("MAIL_TO", "").strip()
+    smtp_user = os.environ.get("SMTP_USER", "").strip()
+    if not smtp_user and mail_to:
+        smtp_user = mail_to.split(",")[0].strip()
+    smtp_from = os.environ.get("SMTP_FROM", "").strip() or smtp_user
     return Settings(
         timezone=str(raw.get("timezone") or "Asia/Shanghai"),
         digest_hour=int(raw.get("digest_hour") or 8),
@@ -84,6 +104,13 @@ def load_settings(feeds_path: Path | None = None) -> Settings:
         categories=categories,
         telegram_bot_token=os.environ.get("TELEGRAM_BOT_TOKEN", "").strip(),
         telegram_chat_id=os.environ.get("TELEGRAM_CHAT_ID", "").strip(),
+        mail_to=mail_to,
+        smtp_user=smtp_user,
+        smtp_password=os.environ.get("SMTP_PASSWORD", "").strip(),
+        smtp_host=os.environ.get("SMTP_HOST", "").strip(),
+        smtp_port=int(os.environ.get("SMTP_PORT", "0") or 0),
+        smtp_from=smtp_from,
+        smtp_security=os.environ.get("SMTP_SECURITY", "").strip().lower(),
         llm_api_key=os.environ.get("LLM_API_KEY", "").strip(),
         llm_base_url=os.environ.get("LLM_BASE_URL", "https://api.deepseek.com").rstrip("/"),
         llm_model=os.environ.get("LLM_MODEL", "deepseek-chat").strip() or "deepseek-chat",

@@ -1,5 +1,5 @@
 [Unit]
-Description=Personal daily news digest Telegram bot
+Description=Personal daily news digest (email / Telegram)
 After=network-online.target
 Wants=network-online.target
 

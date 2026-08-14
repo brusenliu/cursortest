@@ -100,3 +100,17 @@ async def build_digest(settings: Settings, store: Store, mark_seen: bool = True)
         store.set_kv("last_digest", "\n\n---SPLIT---\n\n".join(messages))
         store.set_kv("last_digest_date", today)
     return messages, selected, skipped
+
+
+def render_email(messages: list[str], today: str) -> tuple[str, str]:
+    body = "<hr style=\"border:none;border-top:1px solid #eee;margin:24px 0\">".join(messages)
+    html = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.55;max-width:680px;margin:24px auto;padding:0 16px;color:#222">
+{body}
+<p style="color:#888;font-size:12px;margin-top:32px">由你的资讯机器人发送 · 仅供本人阅读</p>
+</body>
+</html>
+"""
+    return f"每日资讯 {today}", html
