@@ -16,7 +16,7 @@
 源列表在 [`newsbot/feeds.yaml`](newsbot/feeds.yaml)，默认包括：
 
 - 科技：Hacker News、Solidot、少数派
-- 国内：36氪、IT之家、新浪国内
+- 国内：澎湃、界面、36氪、IT之家、新浪国内（个别源失败会自动跳过）
 - 国际：BBC World、NPR News
 
 ## 1. 准备发信邮箱
@@ -98,4 +98,30 @@ journalctl -u newsbot -f
 | `NEWSBOT_DB` | 否 | SQLite 路径 |
 | `LLM_API_KEY` | 否 | 配了才调用大模型整理摘要 |
 
-Telegram 仍可用：给 [@BotFather](https://t.me/BotFather) 申请 token 后填进 env，服务会同时轮询 Telegram。
+## 4. （可选）Telegram 推送
+
+这台 VPS 的 443 已被 sing-box 占用，**不能用 webhook**，程序用**轮询**访问 `api.telegram.org`，不新开公网端口。
+
+1. 在 Telegram 找 [@BotFather](https://t.me/BotFather)，发送 `/newbot`，按提示取名，拿到 **Bot Token**
+2. 给你的 bot 发一条 `/start`
+3. 在服务器 `/etc/newsbot.env` 填入：
+
+```
+TELEGRAM_BOT_TOKEN=123456:ABC...
+TELEGRAM_CHAT_ID=你的chat_id
+```
+
+若还不知道 chat id：先只填 `TELEGRAM_BOT_TOKEN` 并重启，给 bot 发 `/start`，它会回复你的 chat id；写入 `TELEGRAM_CHAT_ID` 后再重启。
+
+4. `sudo systemctl restart newsbot`
+
+### Telegram 命令
+
+| 命令 | 作用 |
+|------|------|
+| `/start` | 绑定当前聊天为推送目标（仅 `TELEGRAM_CHAT_ID` 中的 id 可用） |
+| `/today` | 立刻生成并发送今日摘要 |
+| `/sources` | 列出当前 RSS 源 |
+| `/ping` | 探活 |
+
+配置了邮件时，Telegram 与邮件会**同时**收到每日 08:00 摘要。
