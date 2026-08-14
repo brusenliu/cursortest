@@ -125,3 +125,54 @@ TELEGRAM_CHAT_ID=你的chat_id
 | `/ping` | 探活 |
 
 配置了邮件时，Telegram 与邮件会**同时**收到每日 08:00 摘要。
+
+## 5. Web 图形化监控（Netdata）
+
+浏览器打开即可查看 CPU、内存、磁盘、网络、进程等实时曲线。Netdata 只监听本机，通过 nginx **80 端口**的 `/monitor/` 路径对外提供访问（**443 仍给 sing-box**）。
+
+### 安装
+
+```bash
+chmod +x deploy/install-monitor.sh
+sudo ./deploy/install-monitor.sh
+```
+
+非交互式安装（推荐脚本/自动化时使用）：
+
+```bash
+sudo MONITOR_USER=admin MONITOR_PASSWORD='你的强密码' ./deploy/install-monitor.sh
+```
+
+### 访问
+
+```
+http://你的服务器IP/monitor/
+```
+
+浏览器会弹出用户名/密码框（默认用户名 `admin`，密码为安装时设置的值）。
+
+### 改密码
+
+```bash
+sudo htpasswd /etc/nginx/.htpasswd-monitor admin
+sudo systemctl reload nginx
+```
+
+### 仅 SSH 隧道访问（不暴露公网）
+
+若不想把监控页挂到公网 80 端口，可跳过 nginx 配置，只用隧道：
+
+```bash
+ssh -L 19999:127.0.0.1:19999 root@你的服务器IP
+# 本机浏览器打开 http://localhost:19999
+```
+
+### 验收
+
+```bash
+systemctl is-active netdata nginx
+curl -sI http://127.0.0.1:19999 | head -1
+ss -tlnp | grep 19999   # 应只监听 127.0.0.1
+```
+
+密码文件 `/etc/nginx/.htpasswd-monitor` **不要提交到 git**。

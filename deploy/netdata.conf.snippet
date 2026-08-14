@@ -1,0 +1,10 @@
+# Low-memory tuning for 1 core / 2 GB VPS. Installed to /etc/netdata/netdata.conf.d/lowmem.conf
+
+[global]
+    memory mode = dbengine
+    page cache size = 32
+    dbengine multihost disk space = 256
+    update every = 2
+
+[web]
+    bind to = 127.0.0.1
