@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>个人信息页 — 等级系统改版原型</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --panel-bg: rgba(26, 26, 46, 0.92);
+      --card-bg: #2A2A3E;
+      --card-hover: #353550;
+      --text-primary: #FFFFFF;
+      --text-secondary: #8E8E93;
+      --accent: #7B61FF;
+      --accent-end: #B06CFF;
+      --red-dot: #FF3B30;
+      --success: #34C759;
+      --locked: #5A5A6A;
+      --hunger-bar: #4A4A5A;
+      --happiness-bar: #FF6B9D;
+      --bar-empty: #2A2A3E;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0D0D1A url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%232A2A3E' fill-opacity='0.3'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      color: var(--text-primary);
+    }
+
+    .phone-frame {
+      width: 390px;
+      min-height: 844px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      z-index: 0;
+    }
+
+    .sidebar {
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 78%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    /* Currency bar */
+    .currency-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .currency-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .currency-pill .icon { font-size: 16px; }
+    .currency-pill .add-btn {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .menu-dots {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    /* Profile header */
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .avatar {
+      width: 64px; height: 64px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #FFD1DC, #FFB6C1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+    .profile-info { flex: 1; min-width: 0; }
+    .profile-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .profile-name { font-size: 18px; font-weight: 700; }
+    .profile-handle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* Level badge */
+    .level-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: linear-gradient(135deg, #6B3FA0, #9B59B6);
+      border-radius: 14px;
+      padding: 3px 10px 3px 4px;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .level-badge:active { transform: scale(0.95); }
+    .level-badge .badge-icon {
+      width: 20px; height: 20px;
+      background: linear-gradient(135deg, #B06CFF, #7B61FF);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: 700;
+    }
+    .level-badge .badge-num { font-size: 14px; font-weight: 700; }
+    .red-dot {
+      position: absolute;
+      top: -3px; right: -3px;
+      width: 8px; height: 8px;
+      background: var(--red-dot);
+      border-radius: 50%;
+      border: 2px solid var(--panel-bg);
+    }
+
+    /* EXP bar */
+    .exp-section {
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+    .exp-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .exp-label span:first-child {
+      font-size: 12px;
+      color: var(--accent-end);
+      font-weight: 600;
+    }
+    .exp-label span:last-child {
+      font-size: 12px;
+      color: var(--accent-end);
+      font-weight: 500;
+    }
+    .exp-bar {
+      height: 8px;
+      background: var(--bar-empty);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .exp-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-end));
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    /* Status bars */
+    .status-section { margin-bottom: 16px; }
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 28px;
+      margin-bottom: 8px;
+    }
+    .status-row:last-child { margin-bottom: 0; }
+    .status-icon { font-size: 14px; width: 20px; text-align: center; }
+    .status-label { font-size: 12px; color: #AAA; width: 48px; }
+    .status-value { font-size: 12px; font-weight: 500; width: 48px; }
+    .status-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--bar-empty);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .status-bar-fill { height: 100%; border-radius: 2px; }
+    .status-bar-fill.hunger { background: var(--hunger-bar); }
+    .status-bar-fill.happiness { background: var(--happiness-bar); }
+
+    /* Menu */
+    .menu-group {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 8px;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+    .menu-item:hover { background: var(--card-hover); }
+    .menu-item:active { background: var(--card-hover); }
+    .menu-item .menu-icon { font-size: 18px; width: 24px; text-align: center; }
+    .menu-item .menu-text { font-size: 15px; flex: 1; }
+    .menu-item .menu-red-dot {
+      width: 8px; height: 8px;
+      background: var(--red-dot);
+      border-radius: 50%;
+    }
+
+    /* Bottom nav hint */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 60px;
+      background: rgba(26, 26, 46, 0.95);
+      display: flex;
+      z-index: 5;
+    }
+    .bottom-nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      gap: 4px;
+    }
+    .bottom-nav-item.active { color: var(--accent-end); }
+
+    /* Reward modal */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .reward-panel {
+      width: 100%;
+      max-height: 85%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      border-radius: 20px 20px 0 0;
+      padding: 20px 16px 32px;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .reward-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .reward-title { font-size: 17px; font-weight: 700; }
+
+    .reward-summary {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .reward-summary .current-level {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .reward-summary .current-level strong {
+      color: var(--text-primary);
+      font-size: 24px;
+    }
+    .reward-badge-large {
+      width: 80px; height: 80px;
+      margin: 0 auto 16px;
+      background: linear-gradient(135deg, #6B3FA0, #9B59B6);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .reward-badge-large .badge-icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #B06CFF, #7B61FF);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    }
+
+    .milestone-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .milestone-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .milestone-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      transition: background 0.15s;
+    }
+    .milestone-item.claimable {
+      background: linear-gradient(135deg, rgba(123, 97, 255, 0.15), rgba(176, 108, 255, 0.1));
+      border: 1px solid rgba(123, 97, 255, 0.3);
+    }
+    .milestone-item.locked { opacity: 0.5; }
+
+    .milestone-badge {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #6B3FA0, #9B59B6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .milestone-info { flex: 1; min-width: 0; }
+    .milestone-level { font-size: 14px; font-weight: 700; }
+    .milestone-reward { font-size: 13px; color: #AAA; margin-top: 2px; }
+
+    .milestone-action {
+      flex-shrink: 0;
+    }
+    .btn-claim {
+      background: linear-gradient(135deg, var(--accent), var(--accent-end));
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      position: relative;
+    }
+    .btn-claim .red-dot {
+      position: absolute;
+      top: -2px; right: -2px;
+      width: 8px; height: 8px;
+      border: 2px solid var(--card-bg);
+    }
+    .status-claimed {
+      color: var(--success);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .status-locked {
+      color: var(--locked);
+      font-size: 13px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(52, 199, 89, 0.95);
+      color: white;
+      padding: 10px 24px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 200;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-frame">
+    <div class="game-bg"></div>
+
+    <aside class="sidebar">
+      <div class="currency-bar">
+        <div class="currency-pill">
+          <span class="icon">💎</span>
+          <span>99,999</span>
+          <button class="add-btn">+</button>
+        </div>
+        <div class="currency-pill">
+          <span class="icon">🪙</span>
+          <span>99,999</span>
+          <button class="add-btn">+</button>
+        </div>
+        <button class="menu-dots">⋯</button>
+      </div>
+
+      <div class="profile-header">
+        <div class="avatar">👧</div>
+        <div class="profile-info">
+          <div class="profile-name-row">
+            <span class="profile-name">Vilenpt</span>
+            <div class="level-badge" id="levelBadge" onclick="openRewardPanel()">
+              <div class="badge-icon"></div>
+              <span class="badge-num" id="levelNum">35</span>
+              <span class="red-dot" id="badgeRedDot"></span>
+            </div>
+          </div>
+          <div class="profile-handle">@Vilenpt</div>
+        </div>
+      </div>
+
+      <div class="exp-section" onclick="openRewardPanel()">
+        <div class="exp-label">
+          <span>EXP</span>
+          <span id="expText">2,450 / 3,000</span>
+        </div>
+        <div class="exp-bar">
+          <div class="exp-bar-fill" id="expFill" style="width: 81.7%"></div>
+        </div>
+      </div>
+
+      <div class="status-section">
+        <div class="status-row">
+          <span class="status-icon">🍴</span>
+          <span class="status-label">饱食度</span>
+          <span class="status-value">9/100</span>
+          <div class="status-bar">
+            <div class="status-bar-fill hunger" style="width: 9%"></div>
+          </div>
+        </div>
+        <div class="status-row">
+          <span class="status-icon">💗</span>
+          <span class="status-label">幸福度</span>
+          <span class="status-value">90/100</span>
+          <div class="status-bar">
+            <div class="status-bar-fill happiness" style="width: 90%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu-group">
+        <div class="menu-item"><span class="menu-icon">👕</span><span class="menu-text">编辑装扮</span></div>
+        <div class="menu-item"><span class="menu-icon">🌍</span><span class="menu-text">创造引擎</span></div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-item"><span class="menu-icon">📋</span><span class="menu-text">入住指南</span></div>
+        <div class="menu-item"><span class="menu-icon">✅</span><span class="menu-text">每日任务</span></div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-item"><span class="menu-icon">🎒</span><span class="menu-text">背包</span></div>
+        <div class="menu-item"><span class="menu-icon">✉️</span><span class="menu-text">邮件</span></div>
+        <div class="menu-item"><span class="menu-icon">📢</span><span class="menu-text">公告</span></div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-item" onclick="openRewardPanel()">
+          <span class="menu-icon">🏆</span>
+          <span class="menu-text">等级奖励</span>
+          <span class="menu-red-dot" id="menuRedDot"></span>
+        </div>
+        <div class="menu-item"><span class="menu-icon">❓</span><span class="menu-text">帮助</span></div>
+        <div class="menu-item"><span class="menu-icon">💡</span><span class="menu-text">创作中心</span></div>
+        <div class="menu-item"><span class="menu-icon">⚙️</span><span class="menu-text">设置</span></div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-item"><span class="menu-icon">🚪</span><span class="menu-text">登出</span></div>
+      </div>
+    </aside>
+
+    <nav class="bottom-nav">
+      <div class="bottom-nav-item"><span>🏪</span>商店</div>
+      <div class="bottom-nav-item active"><span>👤</span>我的</div>
+    </nav>
+
+    <div class="modal-overlay" id="rewardModal">
+      <div class="reward-panel">
+        <div class="reward-header">
+          <button class="back-btn" onclick="closeRewardPanel()">←</button>
+          <span class="reward-title">等级奖励</span>
+        </div>
+
+        <div class="reward-summary">
+          <div class="current-level">当前等级 <strong>Lv.<span id="modalLevel">35</span></strong></div>
+          <div class="reward-badge-large"><div class="badge-icon"></div></div>
+          <div class="exp-section" style="margin-bottom: 0; cursor: default;">
+            <div class="exp-label">
+              <span>EXP</span>
+              <span>2,450 / 3,000</span>
+            </div>
+            <div class="exp-bar">
+              <div class="exp-bar-fill" style="width: 81.7%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="milestone-title">里程碑奖励</div>
+        <div class="milestone-list" id="milestoneList"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script>
+    const milestones = [
+      { level: 30, reward: '金币 × 500', status: 'claimed' },
+      { level: 35, reward: '钻石 × 50', status: 'claimable' },
+      { level: 40, reward: '装扮 × 1', status: 'locked' },
+      { level: 50, reward: '金币 × 2000', status: 'locked' },
+    ];
+
+    function renderMilestones() {
+      const list = document.getElementById('milestoneList');
+      list.innerHTML = milestones.map(m => {
+        let action = '';
+        if (m.status === 'claimed') action = '<span class="status-claimed">✓ 已领取</span>';
+        else if (m.status === 'claimable') action = `<button class="btn-claim" onclick="claimReward(${m.level})">领取<span class="red-dot"></span></button>`;
+        else action = '<span class="status-locked">未达成</span>';
+
+        return `<div class="milestone-item ${m.status}">
+          <div class="milestone-badge">${m.level}</div>
+          <div class="milestone-info">
+            <div class="milestone-level">Lv.${m.level}</div>
+            <div class="milestone-reward">${m.reward}</div>
+          </div>
+          <div class="milestone-action">${action}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function updateRedDots() {
+      const hasPending = milestones.some(m => m.status === 'claimable');
+      document.getElementById('badgeRedDot').style.display = hasPending ? 'block' : 'none';
+      document.getElementById('menuRedDot').style.display = hasPending ? 'block' : 'none';
+    }
+
+    function openRewardPanel() {
+      document.getElementById('rewardModal').classList.add('open');
+    }
+
+    function closeRewardPanel() {
+      document.getElementById('rewardModal').classList.remove('open');
+    }
+
+    function claimReward(level) {
+      const m = milestones.find(m => m.level === level);
+      if (!m || m.status !== 'claimable') return;
+      m.status = 'claimed';
+      renderMilestones();
+      updateRedDots();
+      showToast(`成功领取 Lv.${level} 奖励：${m.reward}`);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    document.getElementById('rewardModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeRewardPanel();
+    });
+
+    renderMilestones();
+    updateRedDots();
+  </script>
+</body>
+</html>
