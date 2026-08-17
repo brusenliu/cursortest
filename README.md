@@ -6,8 +6,13 @@
 
 | 文件 | 说明 |
 |------|------|
-| [mockups/profile-main-mockup.png](mockups/profile-main-mockup.png) | 主界面方案图（含等级徽章、经验条、红点） |
+| [mockups/layout-comparison-all.png](mockups/layout-comparison-all.png) | **五方案排版对比总览图** |
+| [docs/layout-options.md](docs/layout-options.md) | 五方案排版说明与决策建议 |
+| [prototype/layout-comparison.html](prototype/layout-comparison.html) | 五方案排版可交互对比页 |
+| [mockups/profile-main-mockup.png](mockups/profile-main-mockup.png) | 主界面方案图（方案 A，含等级徽章、经验条、红点） |
 | [mockups/profile-reward-panel-mockup.png](mockups/profile-reward-panel-mockup.png) | 等级奖励面板方案图 |
+| [mockups/layout-scheme-b-avatar-badge.png](mockups/layout-scheme-b-avatar-badge.png) | 方案 B 高保真细节图 |
+| [mockups/layout-scheme-c-ring-exp.png](mockups/layout-scheme-c-ring-exp.png) | 方案 C 高保真细节图 |
 | [docs/profile-level-redesign.md](docs/profile-level-redesign.md) | 完整 UI 规格文档 |
 | [prototype/index.html](prototype/index.html) | 可交互 HTML 原型（可直接浏览器打开） |
 | [prototype/constants/levelBadgeTier.ts](prototype/constants/levelBadgeTier.ts) | 等级徽章映射逻辑 |

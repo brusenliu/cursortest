@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人信息页 — 排版方案对比</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --panel-bg: rgba(26, 26, 46, 0.92);
+      --card-bg: #2A2A3E;
+      --text-primary: #FFFFFF;
+      --text-secondary: #8E8E93;
+      --text-muted: #AAAAAA;
+      --accent: #7B61FF;
+      --accent-end: #B06CFF;
+      --red-dot: #FF3B30;
+      --hunger-bar: #4A4A5A;
+      --happiness-bar: #FF6B9D;
+      --bar-empty: #2A2A3E;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0D0D1A;
+      color: var(--text-primary);
+      padding: 32px 24px 64px;
+    }
+
+    .page-header {
+      max-width: 1400px;
+      margin: 0 auto 32px;
+    }
+    .page-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .page-header p {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 720px;
+    }
+
+    .legend {
+      max-width: 1400px;
+      margin: 0 auto 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red-dot); }
+    .legend-badge {
+      width: 18px; height: 18px;
+      background: linear-gradient(135deg, #6B3FA0, #9B59B6);
+      border-radius: 6px;
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    }
+
+    .grid {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 28px;
+    }
+
+    .scheme-card {
+      background: #141428;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #2A2A3E;
+    }
+    .scheme-label {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid #2A2A3E;
+    }
+    .scheme-label h2 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .scheme-label .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent-end);
+      background: rgba(123, 97, 255, 0.15);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+    .scheme-label p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .phone {
+      width: 100%;
+      aspect-ratio: 390 / 520;
+      position: relative;
+      overflow: hidden;
+    }
+    .phone-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #1a1a2e, #0f3460);
+    }
+    .sidebar {
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 88%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    /* Shared components */
+    .currency-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+    .currency-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .currency-pill .add {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .avatar-base {
+      width: 56px; height: 56px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #FFD1DC, #FFB6C1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: linear-gradient(135deg, #6B3FA0, #9B59B6);
+      border-radius: 12px;
+      padding: 2px 8px 2px 3px;
+      cursor: pointer;
+    }
+    .badge-icon {
+      width: 18px; height: 18px;
+      background: linear-gradient(135deg, #B06CFF, #7B61FF);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    }
+    .badge-num { font-size: 12px; font-weight: 700; }
+    .red-dot {
+      position: absolute;
+      top: -3px; right: -3px;
+      width: 7px; height: 7px;
+      background: var(--red-dot);
+      border-radius: 50%;
+      border: 1.5px solid #1A1A2E;
+    }
+
+    .name { font-size: 16px; font-weight: 700; }
+    .handle { font-size: 11px; color: var(--text-secondary); }
+
+    .exp-bar-wrap { width: 100%; }
+    .exp-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .exp-label { font-size: 10px; color: var(--accent-end); font-weight: 600; }
+    .exp-value { font-size: 10px; color: var(--text-muted); }
+    .exp-bar {
+      height: 6px;
+      background: var(--bar-empty);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .exp-fill {
+      height: 100%;
+      width: 81.7%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-end));
+      border-radius: 3px;
+    }
+    .exp-bar-inline {
+      position: relative;
+      height: 22px;
+      background: var(--bar-empty);
+      border-radius: 11px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .exp-bar-inline .exp-fill {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      border-radius: 11px;
+    }
+    .exp-bar-inline .exp-text {
+      position: relative;
+      z-index: 1;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .status-section {
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-top: 10px;
+      flex-shrink: 0;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 22px;
+      font-size: 10px;
+    }
+    .status-row + .status-row { margin-top: 6px; }
+    .status-label { color: var(--text-muted); width: 36px; }
+    .status-val { font-weight: 600; width: 36px; text-align: right; }
+    .status-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--bar-empty);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .status-fill.hunger { height: 100%; width: 9%; background: var(--hunger-bar); border-radius: 2px; }
+    .status-fill.happy { height: 100%; width: 90%; background: var(--happiness-bar); border-radius: 2px; }
+
+    .menu-preview {
+      margin-top: auto;
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 4px;
+      flex-shrink: 0;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+    .menu-item.highlight { background: rgba(123, 97, 255, 0.12); }
+    .menu-icon { font-size: 14px; }
+    .menu-dot { margin-left: auto; width: 7px; height: 7px; background: var(--red-dot); border-radius: 50%; }
+
+    /* ===== Scheme A: Inline badge ===== */
+    .scheme-a .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .scheme-a .info { flex: 1; min-width: 0; }
+    .scheme-a .name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* ===== Scheme B: Badge on avatar ===== */
+    .scheme-b .profile-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .scheme-b .avatar-wrap { position: relative; flex-shrink: 0; }
+    .scheme-b .avatar-badge {
+      position: absolute;
+      bottom: -4px;
+      right: -6px;
+      transform: scale(0.9);
+    }
+    .scheme-b .info { flex: 1; padding-top: 4px; }
+
+    /* ===== Scheme C: Ring EXP ===== */
+    .scheme-c .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .scheme-c .avatar-ring {
+      position: relative;
+      width: 68px; height: 68px;
+      flex-shrink: 0;
+    }
+    .scheme-c .ring-svg {
+      position: absolute;
+      inset: 0;
+      transform: rotate(-90deg);
+    }
+    .scheme-c .avatar-inner {
+      position: absolute;
+      top: 6px; left: 6px;
+      width: 56px; height: 56px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #FFD1DC, #FFB6C1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+    .scheme-c .ring-badge {
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.85);
+    }
+    .scheme-c .exp-hint {
+      font-size: 10px;
+      color: var(--accent-end);
+      margin-top: 6px;
+    }
+
+    /* ===== Scheme D: Card container ===== */
+    .scheme-d .profile-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .scheme-d .card-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .scheme-d .card-badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .scheme-d .card-badge-row .name { font-size: 15px; }
+
+    /* ===== Scheme E: Vertical stack ===== */
+    .scheme-e .profile-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .scheme-e .avatar-large {
+      width: 64px; height: 64px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #FFD1DC, #FFB6C1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    .scheme-e .badge-center { margin-bottom: 6px; }
+    .scheme-e .exp-bar-wrap { width: 100%; padding: 0 4px; }
+
+    .pros-cons {
+      padding: 12px 18px 16px;
+      border-top: 1px solid #2A2A3E;
+    }
+    .pros-cons dt {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent-end);
+      margin-bottom: 4px;
+    }
+    .pros-cons dd {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 8px;
+      margin-left: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>个人信息页排版方案对比</h1>
+    <p>统一数据：Lv.35（Tier 04 紫色六边形）· EXP 2,450 / 3,000 · 有可领取等级奖励（红点）。点击等级徽章 → 打开等级奖励列表。下方保留饱食度/幸福度压缩展示。</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot"></span> 有待领奖励时显示红点</div>
+    <div class="legend-item"><span class="legend-badge"></span> 等级徽章按区间映射（Lv.31–40 = Tier 04）</div>
+    <div class="legend-item">🟣 EXP 条可点击，同徽章入口</div>
+  </div>
+
+  <div class="grid">
+
+    <!-- Scheme A -->
+    <div class="scheme-card">
+      <div class="scheme-label">
+        <span class="tag">方案 A · 推荐</span>
+        <h2>徽章 inline · EXP 条独立</h2>
+        <p>昵称同行放等级徽章，@handle 下方全宽经验条。信息密度均衡，最接近现有侧边栏结构。</p>
+      </div>
+      <div class="phone scheme-a">
+        <div class="phone-bg"></div>
+        <div class="sidebar">
+          <div class="currency-bar">
+            <div class="currency-pill">💎 99,999 <span class="add">+</span></div>
+            <div class="currency-pill">🪙 99,999 <span class="add">+</span></div>
+          </div>
+          <div class="profile-header">
+            <div class="avatar-base">👧</div>
+            <div class="info">
+              <div class="name-row">
+                <span class="name">Vilenpt</span>
+                <div class="badge"><div class="badge-icon"></div><span class="badge-num">35</span><span class="red-dot"></span></div>
+              </div>
+              <div class="handle">@Vilenpt</div>
+            </div>
+          </div>
+          <div class="exp-bar-wrap">
+            <div class="exp-label-row"><span class="exp-label">EXP</span><span class="exp-value">2,450 / 3,000</span></div>
+            <div class="exp-bar"><div class="exp-fill"></div></div>
+          </div>
+          <div class="status-section">
+            <div class="status-row"><span>🍴</span><span class="status-label">饱食度</span><span class="status-val">9/100</span><div class="status-bar"><div class="status-fill hunger"></div></div></div>
+            <div class="status-row"><span>💗</span><span class="status-label">幸福度</span><span class="status-val">90/100</span><div class="status-bar"><div class="status-fill happy"></div></div></div>
+          </div>
+          <div class="menu-preview">
+            <div class="menu-item highlight"><span class="menu-icon">🎁</span>等级奖励<span class="menu-dot"></span></div>
+          </div>
+        </div>
+      </div>
+      <dl class="pros-cons">
+        <dt>优点</dt><dd>改动最小；徽章与昵称关联清晰；EXP 数值易读</dd>
+        <dt>注意</dt><dd>昵称过长时徽章可能换行，需限制昵称宽度</dd>
+      </dl>
+    </div>
+
+    <!-- Scheme B -->
+    <div class="scheme-card">
+      <div class="scheme-label">
+        <span class="tag">方案 B</span>
+        <h2>徽章叠在头像角</h2>
+        <p>等级徽章锚定在头像右下角，昵称区更干净。适合强调头像角色感。</p>
+      </div>
+      <div class="phone scheme-b">
+        <div class="phone-bg"></div>
+        <div class="sidebar">
+          <div class="currency-bar">
+            <div class="currency-pill">💎 99,999 <span class="add">+</span></div>
+            <div class="currency-pill">🪙 99,999 <span class="add">+</span></div>
+          </div>
+          <div class="profile-header">
+            <div class="avatar-wrap">
+              <div class="avatar-base">👧</div>
+              <div class="badge avatar-badge"><div class="badge-icon"></div><span class="badge-num">35</span><span class="red-dot"></span></div>
+            </div>
+            <div class="info">
+              <div class="name">Vilenpt</div>
+              <div class="handle">@Vilenpt</div>
+            </div>
+          </div>
+          <div class="exp-bar-wrap">
+            <div class="exp-bar-inline"><div class="exp-fill"></div><span class="exp-text">EXP 2,450 / 3,000</span></div>
+          </div>
+          <div class="status-section">
+            <div class="status-row"><span>🍴</span><span class="status-label">饱食度</span><span class="status-val">9/100</span><div class="status-bar"><div class="status-fill hunger"></div></div></div>
+            <div class="status-row"><span>💗</span><span class="status-label">幸福度</span><span class="status-val">90/100</span><div class="status-bar"><div class="status-fill happy"></div></div></div>
+          </div>
+          <div class="menu-preview">
+            <div class="menu-item highlight"><span class="menu-icon">🎁</span>等级奖励<span class="menu-dot"></span></div>
+          </div>
+        </div>
+      </div>
+      <dl class="pros-cons">
+        <dt>优点</dt><dd>头像即等级入口，RPG 感强；昵称行无拥挤</dd>
+        <dt>注意</dt><dd>小屏上角标可能遮挡头像；高 tier 徽章需缩小</dd>
+      </dl>
+    </div>
+
+    <!-- Scheme C -->
+    <div class="scheme-card">
+      <div class="scheme-label">
+        <span class="tag">方案 C · 游戏感</span>
+        <h2>头像环形 EXP</h2>
+        <p>经验进度绕头像一圈，等级徽章在环下方。省垂直空间，视觉最「手游」。</p>
+      </div>
+      <div class="phone scheme-c">
+        <div class="phone-bg"></div>
+        <div class="sidebar">
+          <div class="currency-bar">
+            <div class="currency-pill">💎 99,999 <span class="add">+</span></div>
+            <div class="currency-pill">🪙 99,999 <span class="add">+</span></div>
+          </div>
+          <div class="profile-header">
+            <div class="avatar-ring">
+              <svg class="ring-svg" viewBox="0 0 68 68">
+                <circle cx="34" cy="34" r="30" fill="none" stroke="#2A2A3E" stroke-width="5"/>
+                <circle cx="34" cy="34" r="30" fill="none" stroke="url(#grad)" stroke-width="5"
+                  stroke-dasharray="188.5" stroke-dashoffset="34.3" stroke-linecap="round"/>
+                <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%"><stop offset="0%" stop-color="#7B61FF"/><stop offset="100%" stop-color="#B06CFF"/></linearGradient></defs>
+              </svg>
+              <div class="avatar-inner">👧</div>
+              <div class="badge ring-badge"><div class="badge-icon"></div><span class="badge-num">35</span><span class="red-dot"></span></div>
+            </div>
+            <div class="info">
+              <div class="name">Vilenpt</div>
+              <div class="handle">@Vilenpt</div>
+              <div class="exp-hint">距 Lv.36 还需 550 EXP</div>
+            </div>
+          </div>
+          <div class="status-section">
+            <div class="status-row"><span>🍴</span><span class="status-label">饱食度</span><span class="status-val">9/100</span><div class="status-bar"><div class="status-fill hunger"></div></div></div>
+            <div class="status-row"><span>💗</span><span class="status-label">幸福度</span><span class="status-val">90/100</span><div class="status-bar"><div class="status-fill happy"></div></div></div>
+          </div>
+          <div class="menu-preview">
+            <div class="menu-item highlight"><span class="menu-icon">🎁</span>等级奖励<span class="menu-dot"></span></div>
+          </div>
+        </div>
+      </div>
+      <dl class="pros-cons">
+        <dt>优点</dt><dd>最省高度；EXP 与头像绑定直观；高等级更有仪式感</dd>
+        <dt>注意</dt><dd>精确 EXP 数值需额外文字；环实现成本略高</dd>
+      </dl>
+    </div>
+
+    <!-- Scheme D -->
+    <div class="scheme-card">
+      <div class="scheme-label">
+        <span class="tag">方案 D</span>
+        <h2>信息卡片一体化</h2>
+        <p>头像、徽章、昵称、EXP 包在同一张卡片里。层级清晰，适合后续扩展更多属性。</p>
+      </div>
+      <div class="phone scheme-d">
+        <div class="phone-bg"></div>
+        <div class="sidebar">
+          <div class="currency-bar">
+            <div class="currency-pill">💎 99,999 <span class="add">+</span></div>
+            <div class="currency-pill">🪙 99,999 <span class="add">+</span></div>
+          </div>
+          <div class="profile-card">
+            <div class="card-badge-row">
+              <span class="name">Vilenpt</span>
+              <div class="badge"><div class="badge-icon"></div><span class="badge-num">35</span><span class="red-dot"></span></div>
+            </div>
+            <div class="card-top">
+              <div class="avatar-base">👧</div>
+              <div>
+                <div class="handle">@Vilenpt</div>
+                <div class="exp-label-row" style="margin-top:6px"><span class="exp-label">Lv.35</span><span class="exp-value">2,450 / 3,000</span></div>
+              </div>
+            </div>
+            <div class="exp-bar"><div class="exp-fill"></div></div>
+          </div>
+          <div class="status-section">
+            <div class="status-row"><span>🍴</span><span class="status-label">饱食度</span><span class="status-val">9/100</span><div class="status-bar"><div class="status-fill hunger"></div></div></div>
+            <div class="status-row"><span>💗</span><span class="status-label">幸福度</span><span class="status-val">90/100</span><div class="status-bar"><div class="status-fill happy"></div></div></div>
+          </div>
+          <div class="menu-preview">
+            <div class="menu-item highlight"><span class="menu-icon">🎁</span>等级奖励<span class="menu-dot"></span></div>
+          </div>
+        </div>
+      </div>
+      <dl class="pros-cons">
+        <dt>优点</dt><dd>身份+成长信息聚合；后续可加成就/称号行</dd>
+        <dt>注意</dt><dd>卡片占用略多；与下方菜单卡片视觉需区分</dd>
+      </dl>
+    </div>
+
+    <!-- Scheme E -->
+    <div class="scheme-card">
+      <div class="scheme-label">
+        <span class="tag">方案 E</span>
+        <h2>垂直居中 · 等级优先</h2>
+        <p>头像居中，等级徽章独立一行在昵称上方。强调等级身份，偏「个人主页」风格。</p>
+      </div>
+      <div class="phone scheme-e">
+        <div class="phone-bg"></div>
+        <div class="sidebar">
+          <div class="currency-bar">
+            <div class="currency-pill">💎 99,999 <span class="add">+</span></div>
+            <div class="currency-pill">🪙 99,999 <span class="add">+</span></div>
+          </div>
+          <div class="profile-stack">
+            <div class="avatar-large">👧</div>
+            <div class="badge badge-center"><div class="badge-icon"></div><span class="badge-num">35</span><span class="red-dot"></span></div>
+            <div class="name">Vilenpt</div>
+            <div class="handle" style="margin-bottom:8px">@Vilenpt</div>
+            <div class="exp-bar-wrap">
+              <div class="exp-bar-inline"><div class="exp-fill"></div><span class="exp-text">2,450 / 3,000 EXP</span></div>
+            </div>
+          </div>
+          <div class="status-section">
+            <div class="status-row"><span>🍴</span><span class="status-label">饱食度</span><span class="status-val">9/100</span><div class="status-bar"><div class="status-fill hunger"></div></div></div>
+            <div class="status-row"><span>💗</span><span class="status-label">幸福度</span><span class="status-val">90/100</span><div class="status-bar"><div class="status-fill happy"></div></div></div>
+          </div>
+          <div class="menu-preview">
+            <div class="menu-item highlight"><span class="menu-icon">🎁</span>等级奖励<span class="menu-dot"></span></div>
+          </div>
+        </div>
+      </div>
+      <dl class="pros-cons">
+        <dt>优点</dt><dd>等级最醒目；适合等级驱动玩法</dd>
+        <dt>注意</dt><dd>与现有左对齐侧边栏风格差异大；占用垂直空间多</dd>
+      </dl>
+    </div>
+
+  </div>
+</body>
+</html>

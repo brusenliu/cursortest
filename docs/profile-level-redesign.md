@@ -8,9 +8,11 @@
 
 | 页面 | 文件 |
 |------|------|
-| 主界面（侧边栏） | [`mockups/profile-main-mockup.png`](../mockups/profile-main-mockup.png) |
+| **排版方案对比（5 套）** | [`mockups/layout-comparison-all.png`](../mockups/layout-comparison-all.png) · [`docs/layout-options.md`](layout-options.md) |
+| 主界面（侧边栏，方案 A） | [`mockups/profile-main-mockup.png`](../mockups/profile-main-mockup.png) |
 | 等级奖励面板 | [`mockups/profile-reward-panel-mockup.png`](../mockups/profile-reward-panel-mockup.png) |
 | 可交互原型 | [`prototype/index.html`](../prototype/index.html) |
+| 排版对比页 | [`prototype/layout-comparison.html`](../prototype/layout-comparison.html) |
 
 ---
 
