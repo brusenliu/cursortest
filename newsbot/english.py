@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from urllib.parse import quote
 
 
 @dataclass(frozen=True)
@@ -11,6 +12,30 @@ class Vocab:
     meaning: str
     example: str
     example_zh: str
+
+
+def audio_url(text: str, accent: str = "us") -> str:
+    """Direct MP3 link (Youdao TTS). accent: us | uk."""
+    voice_type = "1" if accent == "us" else "2"
+    return f"https://dict.youdao.com/dictvoice?audio={quote(text)}&type={voice_type}"
+
+
+def audio_links_plain(text: str) -> str:
+    return f"听发音 美 {audio_url(text, 'us')}  |  英 {audio_url(text, 'uk')}"
+
+
+def audio_links_html(text: str) -> str:
+    import html as html_lib
+
+    us = html_lib.escape(audio_url(text, "us"), quote=True)
+    uk = html_lib.escape(audio_url(text, "uk"), quote=True)
+    label = html_lib.escape(text)
+    return (
+        f'<a href="{us}" style="color:#0b57d0;text-decoration:none;font-size:12px;margin-right:8px;" '
+        f'title="美式发音：{label}">🔊 美</a>'
+        f'<a href="{uk}" style="color:#0b57d0;text-decoration:none;font-size:12px;" '
+        f'title="英式发音：{label}">🔊 英</a>'
+    )
 
 
 @dataclass(frozen=True)
@@ -534,15 +559,18 @@ def render_english_plain(plan: EnglishPlan) -> list[str]:
     ]
     for index, word in enumerate(lesson.words, start=1):
         lines.append(f"{index}. {word.word} {word.phonetic} — {word.meaning}")
+        lines.append(f"   {audio_links_plain(word.word)}")
         lines.append(f"   {word.example}")
         lines.append(f"   {word.example_zh}")
+        lines.append(f"   例句发音：{audio_url(word.example, 'us')}")
     lines.extend(
         [
             "今日练习：",
             f"EN: {lesson.practice_en}",
+            f"听练习句：{audio_url(lesson.practice_en, 'us')}",
             f"ZH: {lesson.practice_zh}",
             f"小提示：{lesson.tip}",
-            "建议用时：15–20 分钟（朗读单词 → 跟读例句 → 口头说练习句）",
+            "建议用时：15–20 分钟（点开🔊听发音 → 跟读例句 → 口头说练习句）",
             "",
         ]
     )
@@ -563,13 +591,18 @@ def render_english_html(plan: EnglishPlan) -> str:
                   {html_lib.escape(word.word)}
                   <span style="font-weight:400;color:#6b7280;font-size:12px;">{html_lib.escape(word.phonetic)}</span>
                   <span style="font-weight:400;color:#374151;"> — {html_lib.escape(word.meaning)}</span>
+                  <span style="margin-left:8px;font-weight:400;">{audio_links_html(word.word)}</span>
                 </div>
-                <div style="margin-top:4px;color:#111;font-size:13px;line-height:1.5;">{html_lib.escape(word.example)}</div>
+                <div style="margin-top:4px;color:#111;font-size:13px;line-height:1.5;">
+                  {html_lib.escape(word.example)}
+                  <span style="margin-left:6px;">{audio_links_html(word.example)}</span>
+                </div>
                 <div style="color:#6b7280;font-size:12px;">{html_lib.escape(word.example_zh)}</div>
               </td>
             </tr>
             """
         )
+    practice_audio = audio_links_html(lesson.practice_en)
     return f"""
     <tr>
       <td style="padding:18px 24px 8px 24px;font-size:16px;font-weight:700;color:#111;border-top:1px solid #eee;background:#f8fafc;">
@@ -580,16 +613,17 @@ def render_english_html(plan: EnglishPlan) -> str:
       <td style="padding:4px 24px 10px 24px;font-size:13px;color:#374151;line-height:1.6;">
         <div><b>主题：</b>{html_lib.escape(lesson.theme)} / {html_lib.escape(lesson.theme_zh)}</div>
         <div><b>今日重点：</b>{html_lib.escape(lesson.focus)}（{html_lib.escape(lesson.focus_zh)}）</div>
+        <div style="margin-top:4px;color:#6b7280;font-size:12px;">点击 🔊 美 / 英 可听发音（手机端会打开音频）</div>
       </td>
     </tr>
     {''.join(word_rows)}
     <tr>
       <td style="padding:12px 24px 8px 24px;font-size:13px;color:#111;line-height:1.6;">
-        <div style="font-weight:700;margin-bottom:4px;">今日练习</div>
+        <div style="font-weight:700;margin-bottom:4px;">今日练习 {practice_audio}</div>
         <div><b>EN:</b> {html_lib.escape(lesson.practice_en)}</div>
         <div style="color:#6b7280;"><b>ZH:</b> {html_lib.escape(lesson.practice_zh)}</div>
         <div style="margin-top:8px;color:#374151;"><b>小提示：</b>{html_lib.escape(lesson.tip)}</div>
-        <div style="margin-top:6px;color:#9ca3af;font-size:12px;">建议用时 15–20 分钟：朗读单词 → 跟读例句 → 口头说练习句</div>
+        <div style="margin-top:6px;color:#9ca3af;font-size:12px;">建议用时 15–20 分钟：点开听发音 → 跟读例句 → 口头说练习句</div>
       </td>
     </tr>
     """
