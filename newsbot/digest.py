@@ -8,7 +8,13 @@ from zoneinfo import ZoneInfo
 
 from newsbot.config import Settings
 from newsbot.db import Store
-from newsbot.english import EnglishPlan, lesson_for_date, render_english_html, render_english_plain
+from newsbot.english import (
+    EnglishPlan,
+    LessonAudio,
+    lesson_for_date,
+    render_english_html,
+    render_english_plain,
+)
 from newsbot.fetcher import Article, fetch_articles, format_age
 from newsbot.markets import MarketSnapshot, change_color, fetch_markets, format_change
 from newsbot.summarize import clean_summary, llm_summaries
@@ -246,17 +252,25 @@ def _market_table_html(title: str, quotes) -> str:
     """
 
 
-def render_email(settings: Settings, result: DigestResult) -> tuple[str, str, str]:
+def render_email(
+    settings: Settings,
+    result: DigestResult,
+    *,
+    lesson_audio: LessonAudio | None = None,
+) -> tuple[str, str, str]:
     subject = f"每日资讯 · {result.today_label}"
     total = len(result.selected)
     groups = grouped_items(settings, result)
     translations = result.translations
+    has_audio = lesson_audio is not None
 
     intro = f"共 {total} 条资讯"
     if result.markets and (result.markets.us or result.markets.china or result.markets.gold):
         intro += " · 含行情"
     if result.english:
         intro += " · 含英文计划"
+        if has_audio:
+            intro += "（含发音附件）"
     if result.skipped:
         intro += f" · 未拉取到：{'、'.join(result.skipped)}"
 
@@ -343,8 +357,8 @@ def render_email(settings: Settings, result: DigestResult) -> tuple[str, str, st
             sections_html.append("".join(rows))
 
     if result.english:
-        sections_html.append(render_english_html(result.english))
-        plain_lines.extend(render_english_plain(result.english))
+        sections_html.append(render_english_html(result.english, has_audio=has_audio))
+        plain_lines.extend(render_english_plain(result.english, has_audio=has_audio))
 
     html_body = f"""<!DOCTYPE html>
 <html lang="zh-CN">

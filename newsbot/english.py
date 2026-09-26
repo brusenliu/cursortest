@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import date
 from urllib.parse import quote
+
+import httpx
+
+log = logging.getLogger("newsbot.english")
+
+AUDIO_CID = "english-lesson@newsbot"
 
 
 @dataclass(frozen=True)
@@ -14,28 +21,78 @@ class Vocab:
     example_zh: str
 
 
-def audio_url(text: str, accent: str = "us") -> str:
-    """Direct MP3 link (Youdao TTS). accent: us | uk."""
+@dataclass(frozen=True)
+class LessonAudio:
+    filename: str
+    content: bytes
+    content_id: str = AUDIO_CID
+
+
+def _tts_text(text: str) -> str:
+    cleaned = " ".join((text or "").strip().split())
+    return cleaned[:180]
+
+
+async def _fetch_youdao_mp3(client: httpx.AsyncClient, text: str, accent: str = "us") -> bytes | None:
     voice_type = "1" if accent == "us" else "2"
-    return f"https://dict.youdao.com/dictvoice?audio={quote(text)}&type={voice_type}"
+    url = f"https://dict.youdao.com/dictvoice?audio={quote(text)}&type={voice_type}&le=eng"
+    response = await client.get(url, timeout=20, headers={"User-Agent": "newsbot/1.0"})
+    response.raise_for_status()
+    data = response.content
+    return data if len(data) >= 32 else None
 
 
-def audio_links_plain(text: str) -> str:
-    return f"听发音 美 {audio_url(text, 'us')}  |  英 {audio_url(text, 'uk')}"
-
-
-def audio_links_html(text: str) -> str:
-    import html as html_lib
-
-    us = html_lib.escape(audio_url(text, "us"), quote=True)
-    uk = html_lib.escape(audio_url(text, "uk"), quote=True)
-    label = html_lib.escape(text)
-    return (
-        f'<a href="{us}" style="color:#0b57d0;text-decoration:none;font-size:12px;margin-right:8px;" '
-        f'title="美式发音：{label}">🔊 美</a>'
-        f'<a href="{uk}" style="color:#0b57d0;text-decoration:none;font-size:12px;" '
-        f'title="英式发音：{label}">🔊 英</a>'
+async def _fetch_google_mp3(client: httpx.AsyncClient, text: str) -> bytes | None:
+    url = "https://translate.googleapis.com/translate_tts"
+    response = await client.get(
+        url,
+        params={"ie": "UTF-8", "client": "gtx", "tl": "en", "q": text},
+        timeout=20,
+        headers={"User-Agent": "Mozilla/5.0"},
     )
+    response.raise_for_status()
+    data = response.content
+    return data if len(data) >= 32 else None
+
+
+async def _fetch_mp3(client: httpx.AsyncClient, text: str, accent: str = "us") -> bytes | None:
+    cleaned = _tts_text(text)
+    if not cleaned:
+        return None
+    # Prefer Google for consistent MP3 frames (better when concatenating clips).
+    try:
+        data = await _fetch_google_mp3(client, cleaned)
+        if data:
+            return data
+    except Exception as exc:
+        log.warning("Google TTS failed for %r: %s", cleaned[:40], exc)
+    try:
+        data = await _fetch_youdao_mp3(client, cleaned, accent)
+        if data:
+            return data
+    except Exception as exc:
+        log.warning("Youdao TTS failed for %r: %s", cleaned[:40], exc)
+    return None
+
+
+async def build_lesson_audio(plan: "EnglishPlan", accent: str = "us") -> LessonAudio | None:
+    """Build one continuous MP3: each word → example → practice sentence."""
+    lesson = plan.lesson
+    clips: list[bytes] = []
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        for word in lesson.words:
+            for text in (word.word, word.example):
+                clip = await _fetch_mp3(client, text, accent)
+                if clip:
+                    clips.append(clip)
+        practice = await _fetch_mp3(client, lesson.practice_en, accent)
+        if practice:
+            clips.append(practice)
+    if not clips:
+        return None
+    # Youdao clips share the same encoder; binary concat plays fine in most players.
+    filename = f"英文学习-第{plan.day}天.mp3"
+    return LessonAudio(filename=filename, content=b"".join(clips), content_id=AUDIO_CID)
 
 
 @dataclass(frozen=True)
@@ -549,60 +606,84 @@ def lesson_for_date(today: date) -> EnglishPlan:
     return EnglishPlan(day=day, total_days=total, lesson=lesson, title=title)
 
 
-def render_english_plain(plan: EnglishPlan) -> list[str]:
+def lesson_audio_filename(plan: EnglishPlan) -> str:
+    return f"英文学习-第{plan.day}天.mp3"
+
+
+def render_english_plain(plan: EnglishPlan, *, has_audio: bool = False) -> list[str]:
     lesson = plan.lesson
     lines = [
         f"【{plan.title}】",
         f"主题：{lesson.theme} / {lesson.theme_zh}",
         f"今日重点：{lesson.focus}（{lesson.focus_zh}）",
-        "单词：",
     ]
+    if has_audio:
+        lines.append(f"发音音频（附件，直接播放）：{lesson_audio_filename(plan)}")
+        lines.append("顺序：每个单词 → 对应例句 → 最后练习句")
+    lines.append("单词：")
     for index, word in enumerate(lesson.words, start=1):
         lines.append(f"{index}. {word.word} {word.phonetic} — {word.meaning}")
-        lines.append(f"   {audio_links_plain(word.word)}")
         lines.append(f"   {word.example}")
         lines.append(f"   {word.example_zh}")
-        lines.append(f"   例句发音：{audio_url(word.example, 'us')}")
     lines.extend(
         [
             "今日练习：",
             f"EN: {lesson.practice_en}",
-            f"听练习句：{audio_url(lesson.practice_en, 'us')}",
             f"ZH: {lesson.practice_zh}",
             f"小提示：{lesson.tip}",
-            "建议用时：15–20 分钟（点开🔊听发音 → 跟读例句 → 口头说练习句）",
+            "建议用时：15–20 分钟（听附件跟读 → 口头说练习句）",
             "",
         ]
     )
     return lines
 
 
-def render_english_html(plan: EnglishPlan) -> str:
+def render_english_html(plan: EnglishPlan, *, has_audio: bool = False) -> str:
     import html as html_lib
 
     lesson = plan.lesson
+    filename = html_lib.escape(lesson_audio_filename(plan))
     word_rows = []
-    for word in lesson.words:
+    for index, word in enumerate(lesson.words, start=1):
         word_rows.append(
             f"""
             <tr>
               <td style="padding:8px 24px;border-top:1px solid #f0f0f0;">
                 <div style="font-size:14px;font-weight:700;color:#111;">
+                  <span style="color:#9ca3af;font-weight:400;">{index}.</span>
                   {html_lib.escape(word.word)}
                   <span style="font-weight:400;color:#6b7280;font-size:12px;">{html_lib.escape(word.phonetic)}</span>
                   <span style="font-weight:400;color:#374151;"> — {html_lib.escape(word.meaning)}</span>
-                  <span style="margin-left:8px;font-weight:400;">{audio_links_html(word.word)}</span>
                 </div>
-                <div style="margin-top:4px;color:#111;font-size:13px;line-height:1.5;">
-                  {html_lib.escape(word.example)}
-                  <span style="margin-left:6px;">{audio_links_html(word.example)}</span>
-                </div>
+                <div style="margin-top:4px;color:#111;font-size:13px;line-height:1.5;">{html_lib.escape(word.example)}</div>
                 <div style="color:#6b7280;font-size:12px;">{html_lib.escape(word.example_zh)}</div>
               </td>
             </tr>
             """
         )
-    practice_audio = audio_links_html(lesson.practice_en)
+
+    if has_audio:
+        audio_block = f"""
+        <tr>
+          <td style="padding:8px 24px 12px 24px;">
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;">
+              <div style="font-size:14px;font-weight:700;color:#1e3a8a;margin-bottom:6px;">
+                发音音频（无需跳转）
+              </div>
+              <div style="font-size:12px;color:#1e40af;line-height:1.55;margin-bottom:8px;">
+                打开附件 <b>{filename}</b> 即可连续播放：单词 → 例句 → 练习句。<br>
+                QQ 邮箱 App / 电脑端一般点附件就能播，不用打开浏览器。
+              </div>
+              <audio controls preload="metadata" style="width:100%;max-width:420px;">
+                <source src="cid:{AUDIO_CID}" type="audio/mpeg">
+              </audio>
+            </div>
+          </td>
+        </tr>
+        """
+    else:
+        audio_block = ""
+
     return f"""
     <tr>
       <td style="padding:18px 24px 8px 24px;font-size:16px;font-weight:700;color:#111;border-top:1px solid #eee;background:#f8fafc;">
@@ -613,17 +694,17 @@ def render_english_html(plan: EnglishPlan) -> str:
       <td style="padding:4px 24px 10px 24px;font-size:13px;color:#374151;line-height:1.6;">
         <div><b>主题：</b>{html_lib.escape(lesson.theme)} / {html_lib.escape(lesson.theme_zh)}</div>
         <div><b>今日重点：</b>{html_lib.escape(lesson.focus)}（{html_lib.escape(lesson.focus_zh)}）</div>
-        <div style="margin-top:4px;color:#6b7280;font-size:12px;">点击 🔊 美 / 英 可听发音（手机端会打开音频）</div>
       </td>
     </tr>
+    {audio_block}
     {''.join(word_rows)}
     <tr>
       <td style="padding:12px 24px 8px 24px;font-size:13px;color:#111;line-height:1.6;">
-        <div style="font-weight:700;margin-bottom:4px;">今日练习 {practice_audio}</div>
+        <div style="font-weight:700;margin-bottom:4px;">今日练习</div>
         <div><b>EN:</b> {html_lib.escape(lesson.practice_en)}</div>
         <div style="color:#6b7280;"><b>ZH:</b> {html_lib.escape(lesson.practice_zh)}</div>
         <div style="margin-top:8px;color:#374151;"><b>小提示：</b>{html_lib.escape(lesson.tip)}</div>
-        <div style="margin-top:6px;color:#9ca3af;font-size:12px;">建议用时 15–20 分钟：点开听发音 → 跟读例句 → 口头说练习句</div>
+        <div style="margin-top:6px;color:#9ca3af;font-size:12px;">建议用时 15–20 分钟：听附件跟读 → 口头说练习句</div>
       </td>
     </tr>
     """

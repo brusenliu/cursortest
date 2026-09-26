@@ -3,11 +3,14 @@ from __future__ import annotations
 import logging
 import smtplib
 import ssl
+from email.mime.audio import MIMEAudio
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr, parseaddr
+from typing import Iterable
 
 from newsbot.config import Settings
+from newsbot.english import LessonAudio
 
 log = logging.getLogger("newsbot.mailer")
 
@@ -49,33 +52,71 @@ def resolve_smtp(settings: Settings) -> tuple[str, int, str]:
     )
 
 
-def send_email(settings: Settings, subject: str, html_body: str, plain_body: str = "") -> None:
+def send_email(
+    settings: Settings,
+    subject: str,
+    html_body: str,
+    plain_body: str = "",
+    attachments: Iterable[LessonAudio] | None = None,
+) -> None:
     if not settings.mail_enabled:
         raise RuntimeError("邮件未配置：需要 MAIL_TO 和 SMTP_PASSWORD")
     host, port, security = resolve_smtp(settings)
     from_addr = settings.smtp_from or settings.smtp_user
     user = settings.smtp_user or from_addr
     recipients = settings.mail_recipients
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = formataddr(("每日资讯", from_addr))
-    msg["To"] = ", ".join(recipients)
-    if plain_body:
-        msg.attach(MIMEText(plain_body, "plain", "utf-8"))
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
+    files = list(attachments or [])
 
-    log.info("sending mail via %s:%s (%s) to %s", host, port, security, recipients)
+    # mixed
+    #   alternative (plain + html related with inline audio)
+    #   OR attachment-style audio also listed for QQ/clients that ignore cid
+    root = MIMEMultipart("mixed")
+    root["Subject"] = subject
+    root["From"] = formataddr(("每日资讯", from_addr))
+    root["To"] = ", ".join(recipients)
+
+    related = MIMEMultipart("related")
+    alt = MIMEMultipart("alternative")
+    if plain_body:
+        alt.attach(MIMEText(plain_body, "plain", "utf-8"))
+    alt.attach(MIMEText(html_body, "html", "utf-8"))
+    related.attach(alt)
+
+    for item in files:
+        audio = MIMEAudio(item.content, _subtype="mpeg")
+        audio.add_header("Content-ID", f"<{item.content_id}>")
+        audio.add_header("X-Attachment-Id", item.content_id)
+        # Attachment disposition so QQ Mail shows a tappable file; also used as cid source.
+        # RFC 2231 tuple keeps Chinese filenames intact in QQ / mobile clients.
+        audio.add_header(
+            "Content-Disposition",
+            "attachment",
+            filename=("utf-8", "", item.filename),
+        )
+        related.attach(audio)
+
+    root.attach(related)
+
+    log.info(
+        "sending mail via %s:%s (%s) to %s attachments=%s",
+        host,
+        port,
+        security,
+        recipients,
+        [item.filename for item in files],
+    )
     context = ssl.create_default_context()
+    payload = root.as_string()
     if security == "ssl":
-        with smtplib.SMTP_SSL(host, port, context=context, timeout=30) as smtp:
+        with smtplib.SMTP_SSL(host, port, context=context, timeout=60) as smtp:
             smtp.login(user, settings.smtp_password)
-            smtp.sendmail(from_addr, recipients, msg.as_string())
+            smtp.sendmail(from_addr, recipients, payload)
     else:
-        with smtplib.SMTP(host, port, timeout=30) as smtp:
+        with smtplib.SMTP(host, port, timeout=60) as smtp:
             smtp.ehlo()
             if security == "starttls":
                 smtp.starttls(context=context)
                 smtp.ehlo()
             smtp.login(user, settings.smtp_password)
-            smtp.sendmail(from_addr, recipients, msg.as_string())
+            smtp.sendmail(from_addr, recipients, payload)
     log.info("mail sent: %s", subject)

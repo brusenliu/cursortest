@@ -46,8 +46,13 @@ async def print_digest() -> None:
     try:
         result = await build_digest(settings, store, mark_seen=False, ignore_seen=True)
         print(f"# items={len(result.selected)} skipped={result.skipped}\n")
-        _, html, plain = render_email(settings, result)
+        from newsbot.english import build_lesson_audio
+
+        lesson_audio = await build_lesson_audio(result.english) if result.english else None
+        _, html, plain = render_email(settings, result, lesson_audio=lesson_audio)
         print(plain)
+        if lesson_audio:
+            print(f"---- audio {lesson_audio.filename} bytes={len(lesson_audio.content)} ----\n")
         print("\n---- html bytes", len(html), "----\n")
     finally:
         store.close()

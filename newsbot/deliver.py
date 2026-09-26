@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from newsbot.config import Settings
 from newsbot.db import Store
 from newsbot.digest import DigestResult, build_digest, render_email
+from newsbot.english import build_lesson_audio
 from newsbot.mailer import send_email
 
 log = logging.getLogger("newsbot.deliver")
@@ -29,13 +30,35 @@ async def deliver_digest(
         ignore_seen=ignore_seen,
     )
     today = datetime.now(ZoneInfo(settings.timezone)).strftime("%Y-%m-%d")
-    subject, html, plain = render_email(settings, result)
+
+    lesson_audio = None
+    if result.english and settings.mail_enabled:
+        try:
+            lesson_audio = await build_lesson_audio(result.english)
+            if lesson_audio:
+                log.info(
+                    "lesson audio ready file=%s bytes=%s",
+                    lesson_audio.filename,
+                    len(lesson_audio.content),
+                )
+        except Exception:
+            log.exception("failed to build lesson audio")
+
+    subject, html, plain = render_email(settings, result, lesson_audio=lesson_audio)
 
     mailed = False
     if settings.mail_enabled and (force_mail or result.selected):
         already = store.get_kv("last_mail_date")
         if force_mail or already != today:
-            await asyncio.to_thread(send_email, settings, subject, html, plain)
+            attachments = [lesson_audio] if lesson_audio else []
+            await asyncio.to_thread(
+                send_email,
+                settings,
+                subject,
+                html,
+                plain,
+                attachments,
+            )
             store.set_kv("last_mail_date", today)
             mailed = True
         else:
