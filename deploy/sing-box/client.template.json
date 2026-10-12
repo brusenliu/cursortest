@@ -1,0 +1,67 @@
+{
+  "log": { "level": "info" },
+  "dns": {
+    "servers": [
+      { "type": "https", "tag": "remote", "server": "1.1.1.1", "detour": "sg" },
+      { "type": "udp", "tag": "local", "server": "223.5.5.5" }
+    ],
+    "rules": [ { "rule_set": "geosite-cn", "server": "local" } ],
+    "final": "remote"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "address": [ "172.19.0.1/30" ],
+      "auto_route": true,
+      "strict_route": true
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "anytls",
+      "tag": "sg",
+      "server": "${SERVER_IP}",
+      "server_port": 443,
+      "password": "${ANYTLS_PASSWORD}",
+      "tls": {
+        "enabled": true,
+        "server_name": "${TARGET}",
+        "utls": { "enabled": true, "fingerprint": "chrome" },
+        "reality": {
+          "enabled": true,
+          "public_key": "${REALITY_PUBLIC_KEY}",
+          "short_id": "${REALITY_SHORT_ID}"
+        }
+      }
+    },
+    { "type": "direct", "tag": "direct" }
+  ],
+  "route": {
+    "rules": [
+      { "action": "sniff" },
+      { "protocol": "dns", "action": "hijack-dns" },
+      { "ip_is_private": true, "outbound": "direct" },
+      { "rule_set": [ "geosite-cn", "geoip-cn" ], "outbound": "direct" }
+    ],
+    "rule_set": [
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
+        "download_detour": "sg"
+      },
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+        "download_detour": "sg"
+      }
+    ],
+    "default_domain_resolver": "local",
+    "final": "sg",
+    "auto_detect_interface": true
+  }
+}

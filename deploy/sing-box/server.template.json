@@ -1,0 +1,35 @@
+{
+  "log": { "level": "warn", "timestamp": true },
+  "dns": {
+    "servers": [ { "type": "local", "tag": "local" } ]
+  },
+  "inbounds": [
+    {
+      "type": "anytls",
+      "tag": "anytls-in",
+      "listen": "::",
+      "listen_port": 443,
+      "users": [ { "name": "${ANYTLS_USER}", "password": "${ANYTLS_PASSWORD}" } ],
+      "tls": {
+        "enabled": true,
+        "server_name": "${TARGET}",
+        "reality": {
+          "enabled": true,
+          "handshake": { "server": "${TARGET}", "server_port": 443 },
+          "private_key": "${REALITY_PRIVATE_KEY}",
+          "short_id": [ "${REALITY_SHORT_ID}" ],
+          "max_time_difference": "1m"
+        }
+      }
+    }
+  ],
+  "outbounds": [ { "type": "direct", "tag": "direct" } ],
+  "route": {
+    "rules": [
+      { "action": "sniff" },
+      { "protocol": "dns", "action": "hijack-dns" },
+      { "ip_is_private": true, "action": "reject" }
+    ],
+    "final": "direct"
+  }
+}
