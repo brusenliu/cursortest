@@ -115,6 +115,20 @@ export default function App() {
     if (partial.height != null) next.height = clamp(Math.round(Number(partial.height)) || prev.height, 64, 1600)
     if (partial.spacing != null) next.spacing = clamp(Number(partial.spacing) || prev.spacing, 6, 80)
     if (partial.seed != null) next.seed = clamp(Math.round(Number(partial.seed)) || 1, 1, 999999)
+    if (partial.lineWidth != null) next.lineWidth = clamp(Number(partial.lineWidth) || prev.lineWidth, 0.5, 16)
+    if (partial.rayCount != null) next.rayCount = clamp(Math.round(Number(partial.rayCount)) || prev.rayCount, 3, 72)
+    if (partial.waveAmplitude != null) next.waveAmplitude = clamp(Number(partial.waveAmplitude) || 0, 0, 40)
+    if (partial.waveLength != null) next.waveLength = clamp(Number(partial.waveLength) || prev.waveLength, 12, 160)
+    if (partial.dashLength != null) next.dashLength = clamp(Number(partial.dashLength) || prev.dashLength, 2, 40)
+    if (partial.dashGap != null) next.dashGap = clamp(Number(partial.dashGap) || prev.dashGap, 2, 40)
+    if (
+      (partial.lineType === 'parallel' || partial.lineType === 'dashed') &&
+      partial.lineType !== prev.lineType &&
+      partial.angle == null &&
+      !prev.angle
+    ) {
+      next.angle = 45
+    }
     commitParams(next)
   }
 
@@ -206,6 +220,12 @@ export default function App() {
     })
   }
 
+  function applyCategory(category) {
+    if ((paramsRef.current.category || 'dots') === category) return
+    const preset = PRESETS.find((item) => (item.params.category || 'dots') === category)
+    if (preset) applyPreset(preset.id)
+  }
+
   function randomize() {
     withHistory(() => update({ seed: Math.floor(Math.random() * 999983) + 1 }))
   }
@@ -227,13 +247,15 @@ export default function App() {
 
   function exportPng() {
     const canvas = renderPngCanvas(picture)
-    download('波点图案.png', canvas.toDataURL('image/png'))
+    const name = params.category === 'lines' ? '线纹图案.png' : '波点图案.png'
+    download(name, canvas.toDataURL('image/png'))
   }
 
   function exportSvg() {
     const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
-    download('波点图案.svg', url)
+    const name = params.category === 'lines' ? '线纹图案.svg' : '波点图案.svg'
+    download(name, url)
     setTimeout(() => URL.revokeObjectURL(url), 1500)
   }
 
@@ -248,11 +270,20 @@ export default function App() {
         onExportSvg={exportSvg}
       />
       <div className="workspace">
-      <PresetRail presetId={presetId} onPreset={applyPreset} />
+      <PresetRail
+        category={params.category || 'dots'}
+        presetId={presetId}
+        onPreset={applyPreset}
+        onCategory={applyCategory}
+      />
       <Preview
         svg={svg}
         picture={picture}
-        radial={params.sizeMode === 'radial'}
+        movable={
+          (params.category === 'lines' && (params.lineType === 'radial' || params.lineType === 'concentric')) ||
+          (params.category !== 'lines' && params.sizeMode === 'radial')
+        }
+        showGuide={params.category !== 'lines' && params.sizeMode === 'radial'}
         center={params.radialCenter}
         radius={params.radialRadius}
         onCenter={(radialCenter) => update({ radialCenter })}
@@ -261,7 +292,7 @@ export default function App() {
       />
       <Inspector
         params={params}
-        dotCount={picture.dots.length}
+        dotCount={params.category === 'lines' ? picture.strokes.length : picture.dots.length}
         onCommit={commitEdit}
         onPreview={update}
         onGestureStart={beginGesture}

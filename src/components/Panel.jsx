@@ -27,6 +27,19 @@ const SHAPES = [
   { value: 'heart', label: '心形' },
 ]
 
+const LINE_TYPES = [
+  { value: 'grid', label: '正网格' },
+  { value: 'diag', label: '斜网格' },
+  { value: 'parallel', label: '平行斜线' },
+  { value: 'horizontal', label: '横线' },
+  { value: 'vertical', label: '竖线' },
+  { value: 'radial', label: '放射线' },
+  { value: 'concentric', label: '同心圆' },
+  { value: 'spiral', label: '螺旋线' },
+  { value: 'wave', label: '波浪线' },
+  { value: 'dashed', label: '虚线' },
+]
+
 const COLOR_MODES = [
   { value: 'single', label: '单色' },
   { value: 'dual', label: '双色' },
@@ -151,6 +164,7 @@ function Segment({ label, value, options, onChange, columns = 3 }) {
             role="radio"
             aria-checked={value === option.value}
             className={value === option.value ? 'on' : ''}
+            data-value={option.value}
             onClick={() => onChange(option.value)}
           >
             {option.label}
@@ -223,12 +237,35 @@ export function TopBar({ canUndo, canRedo, onUndo, onRedo, onExportPng, onExport
   )
 }
 
-export function PresetRail({ presetId, onPreset }) {
+export function PresetRail({ category, presetId, onPreset, onCategory }) {
+  const list = PRESETS.filter((preset) => (preset.params.category || 'dots') === category)
   return (
     <aside className="rail">
+      <div className="category-switch" role="radiogroup" aria-label="类别">
+        <button
+          type="button"
+          id="category-dots"
+          role="radio"
+          aria-checked={category === 'dots'}
+          className={category === 'dots' ? 'on' : ''}
+          onClick={() => onCategory('dots')}
+        >
+          波点
+        </button>
+        <button
+          type="button"
+          id="category-lines"
+          role="radio"
+          aria-checked={category === 'lines'}
+          className={category === 'lines' ? 'on' : ''}
+          onClick={() => onCategory('lines')}
+        >
+          线纹
+        </button>
+      </div>
       <h2>预设</h2>
       <div className="preset-list">
-        {PRESETS.map((preset) => (
+        {list.map((preset) => (
           <button
             type="button"
             key={preset.id}
@@ -246,7 +283,8 @@ export function PresetRail({ presetId, onPreset }) {
 }
 
 export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStart, onGestureEnd, onRandomize, onUpload }) {
-  const colorLabel = params.invert ? '底色' : '点颜色'
+  const lines = params.category === 'lines'
+  const colorLabel = params.invert ? '底色' : lines ? '线颜色' : '点颜色'
 
   return (
     <aside className="inspector">
@@ -274,7 +312,7 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
           parse={(raw) => Number(raw)}
         />
         <p id="dot-count">
-          {params.width} × {params.height} · {dotCount} 个点
+          {params.width} × {params.height} · {dotCount} {lines ? '条线' : '个点'}
         </p>
         <NumberField
           id="seed"
@@ -290,9 +328,128 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
         <button type="button" id="randomize" onClick={onRandomize}>
           随机一下
         </button>
-        <p className="hint">种子会影响随机散布、随机大小、调色板取色和做旧。</p>
+        <p className="hint">
+          {lines ? '种子会影响多色取色和做旧。' : '种子会影响随机散布、随机大小、调色板取色和做旧。'}
+        </p>
       </Group>
 
+      {lines ? (
+        <Group title="线型">
+          <Segment
+            label="线型"
+            columns={2}
+            value={params.lineType}
+            options={LINE_TYPES}
+            onChange={(lineType) => onCommit({ lineType })}
+          />
+          <Slider
+            id="line-width"
+            label="线宽"
+            min={0.5}
+            max={16}
+            step={0.1}
+            value={params.lineWidth}
+            onPreview={(lineWidth) => onPreview({ lineWidth })}
+            onGestureStart={onGestureStart}
+            onGestureEnd={onGestureEnd}
+          />
+          <Slider
+            id="spacing"
+            label="间距"
+            min={6}
+            max={80}
+            step={1}
+            value={params.spacing}
+            onPreview={(spacing) => onPreview({ spacing })}
+            onGestureStart={onGestureStart}
+            onGestureEnd={onGestureEnd}
+          />
+          {params.lineType !== 'concentric' && (
+            <Slider
+              id="angle"
+              label="角度"
+              min={0}
+              max={360}
+              step={1}
+              suffix="°"
+              value={params.angle}
+              onPreview={(angle) => onPreview({ angle })}
+              onGestureStart={onGestureStart}
+              onGestureEnd={onGestureEnd}
+            />
+          )}
+          {params.lineType === 'radial' && (
+            <>
+              <p className="hint">在画布上拖动中心。</p>
+              <Slider
+                id="ray-count"
+                label="条数"
+                min={3}
+                max={72}
+                step={1}
+                value={params.rayCount}
+                onPreview={(rayCount) => onPreview({ rayCount })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
+            </>
+          )}
+          {params.lineType === 'concentric' && <p className="hint">在画布上拖动中心。</p>}
+          {params.lineType === 'wave' && (
+            <>
+              <Slider
+                id="wave-amplitude"
+                label="波幅"
+                min={0}
+                max={40}
+                step={0.5}
+                value={params.waveAmplitude}
+                onPreview={(waveAmplitude) => onPreview({ waveAmplitude })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
+              <Slider
+                id="wave-length"
+                label="波长"
+                min={12}
+                max={160}
+                step={1}
+                value={params.waveLength}
+                onPreview={(waveLength) => onPreview({ waveLength })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
+            </>
+          )}
+          {params.lineType === 'dashed' && (
+            <>
+              <Slider
+                id="dash-length"
+                label="线段"
+                min={2}
+                max={40}
+                step={1}
+                value={params.dashLength}
+                onPreview={(dashLength) => onPreview({ dashLength })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
+              <Slider
+                id="dash-gap"
+                label="间隔"
+                min={2}
+                max={40}
+                step={1}
+                value={params.dashGap}
+                onPreview={(dashGap) => onPreview({ dashGap })}
+                onGestureStart={onGestureStart}
+                onGestureEnd={onGestureEnd}
+              />
+            </>
+          )}
+        </Group>
+      ) : (
+      <>
       <Group title="排列">
         <Segment
           label="排列"
@@ -428,6 +585,8 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
           />
         )}
       </Group>
+      </>
+      )}
 
       <Group title="颜色">
         <Segment label="颜色" value={params.colorMode} options={COLOR_MODES} onChange={(colorMode) => onCommit({ colorMode })} />
@@ -443,7 +602,7 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
         )}
         {params.colorMode === 'palette' && (
           <>
-            <p className="hint">每个点从调色板里随机取色。</p>
+            <p className="hint">{lines ? '每条线从调色板里随机取色。' : '每个点从调色板里随机取色。'}</p>
             <div className="palette">
               {params.palette.map((color, index) => (
                 <label key={index} className="swatch">
@@ -489,7 +648,9 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
             onGestureEnd={onGestureEnd}
           />
         )}
-        {params.colorMode === 'dual' && <p className="hint">双色使用点颜色和背景颜色。</p>}
+        {params.colorMode === 'dual' && (
+          <p className="hint">{lines ? '双色使用线颜色和背景颜色。' : '双色使用点颜色和背景颜色。'}</p>
+        )}
       </Group>
 
       <Group title="效果">
@@ -497,7 +658,7 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
         {params.edgeFade && (
           <Slider id="fade-width" label="渐隐宽度" min={10} max={320} step={1} value={params.fadeWidth} onPreview={(fadeWidth) => onPreview({ fadeWidth })} onGestureStart={onGestureStart} onGestureEnd={onGestureEnd} />
         )}
-        <Check id="noise" label="噪点做旧" checked={params.noise} onCommit={(noise) => onCommit({ noise })} />
+        <Check id="noise" label={lines ? '做旧' : '噪点做旧'} checked={params.noise} onCommit={(noise) => onCommit({ noise })} />
         {params.noise && (
           <>
             <Slider
@@ -513,7 +674,7 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
             />
             <Slider
               id="noise-jitter"
-              label="大小抖动"
+              label={lines ? '间距抖动' : '大小抖动'}
               min={0}
               max={0.8}
               step={0.01}
@@ -525,9 +686,13 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
           </>
         )}
         <Check id="invert" label="反相" checked={params.invert} onCommit={(invert) => onCommit({ invert })} />
-        {params.invert && <p className="hint">底色铺满画布，点变成镂空。背景透明时，孔是透明的。</p>}
-        <Check id="merge" label="允许点相互融合" checked={params.merge} onCommit={(merge) => onCommit({ merge })} />
-        {!params.merge && <p className="hint">关闭后，点的直径不会超过间距。</p>}
+        {params.invert && (
+          <p className="hint">
+            {lines ? '底色铺满画布，线变成镂空。背景透明时，孔是透明的。' : '底色铺满画布，点变成镂空。背景透明时，孔是透明的。'}
+          </p>
+        )}
+        {!lines && <Check id="merge" label="允许点相互融合" checked={params.merge} onCommit={(merge) => onCommit({ merge })} />}
+        {!lines && !params.merge && <p className="hint">关闭后，点的直径不会超过间距。</p>}
       </Group>
     </aside>
   )

@@ -126,6 +126,40 @@ button:focus-visible, input:focus-visible {
 
 .inspector { border-left: 1px solid var(--line); }
 
+.category-switch {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 12px 12px 4px;
+  background: var(--surface);
+}
+
+.category-switch button {
+  height: 28px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.category-switch button:first-child { border-radius: 6px 0 0 6px; }
+
+.category-switch button:last-child {
+  border-radius: 0 6px 6px 0;
+  margin-left: -1px;
+}
+
+.category-switch button.on {
+  background: var(--accent-tint);
+  color: var(--accent);
+  position: relative;
+  z-index: 1;
+}
+
+.category-switch button:hover:not(.on) { background: #f5f5f5; }
+
 .rail h2 {
   margin: 0;
   padding: 12px 16px 4px;

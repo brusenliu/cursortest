@@ -1,4 +1,4 @@
-export default function Preview({ svg, picture, radial, center, radius, onCenter, onPositionStart, onPositionEnd }) {
+export default function Preview({ svg, picture, movable, showGuide, center, radius, onCenter, onPositionStart, onPositionEnd }) {
   function pointFromEvent(event) {
     const rect = event.currentTarget.getBoundingClientRect()
     const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
@@ -14,19 +14,19 @@ export default function Preview({ svg, picture, radial, center, radius, onCenter
   }
 
   function onPointerDown(event) {
-    if (!radial || event.button !== 0) return
+    if (!movable || event.button !== 0) return
     event.currentTarget.setPointerCapture(event.pointerId)
     onPositionStart?.()
     onCenter(pointFromEvent(event))
   }
 
   function onPointerMove(event) {
-    if (!radial || !event.currentTarget.hasPointerCapture(event.pointerId)) return
+    if (!movable || !event.currentTarget.hasPointerCapture(event.pointerId)) return
     onCenter(pointFromEvent(event))
   }
 
   function onKeyDown(event) {
-    if (!radial) return
+    if (!movable) return
     const step = event.shiftKey ? 0.02 : 0.005
     const next = { ...center }
     if (event.key === 'ArrowLeft') next.x -= step
@@ -46,18 +46,18 @@ export default function Preview({ svg, picture, radial, center, radius, onCenter
   return (
     <main className="stage-wrap">
       <div
-        className={`stage${radial ? ' is-radial' : ''}`}
+        className={`stage${movable ? ' is-radial' : ''}`}
         style={{ aspectRatio: `${picture.width} / ${picture.height}` }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={finishGesture}
         onPointerCancel={finishGesture}
         onKeyDown={onKeyDown}
-        tabIndex={radial ? 0 : -1}
-        aria-label={radial ? '拖动以移动径向渐变中心' : '波点预览'}
+        tabIndex={movable ? 0 : -1}
+        aria-label={movable ? '拖动以移动中心' : picture.kind === 'lines' ? '线纹预览' : '波点预览'}
       >
         <div className="checker" dangerouslySetInnerHTML={{ __html: svg }} />
-        {radial && (
+        {showGuide && (
           <svg className="guide" viewBox={`0 0 ${picture.width} ${picture.height}`} aria-hidden="true">
             <circle
               cx={center.x * picture.width}
@@ -70,7 +70,7 @@ export default function Preview({ svg, picture, radial, center, radius, onCenter
             />
           </svg>
         )}
-        {radial && (
+        {movable && (
           <span
             className="handle"
             style={{ left: `${center.x * 100}%`, top: `${center.y * 100}%` }}

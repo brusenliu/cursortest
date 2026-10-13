@@ -1,3 +1,4 @@
+import { generateLinePicture } from './lines.js'
 import { makeRng } from './rng.js'
 
 function clamp(n, min, max) {
@@ -254,9 +255,10 @@ function colorAt(params, rng) {
 
 /**
  * Build the picture from parameters.
- * `dots` is the only geometry. Preview, PNG and SVG all draw this list.
+ * Dots and line strokes are separate geometry. Preview, PNG and SVG draw the same picture.
  */
 export function generatePicture(params, mask = null) {
+  if (params?.category === 'lines') return generateLinePicture(params)
   const width = clamp(Math.round(params.width) || 800, 64, 2000)
   const height = clamp(Math.round(params.height) || 600, 64, 2000)
   const spacing = clamp(Number(params.spacing) || 24, 4, 200)
@@ -340,7 +342,9 @@ export function generatePicture(params, mask = null) {
   }
 
   return {
+    kind: 'dots',
     dots,
+    strokes: [],
     width,
     height,
     background: normalized.transparent ? null : normalized.backgroundColor,

@@ -36,6 +36,14 @@ export function baseParams(overrides = {}) {
     invert: false,
     merge: true,
     seed: 1,
+    category: 'dots',
+    lineType: 'grid',
+    lineWidth: 1.5,
+    rayCount: 24,
+    waveAmplitude: 8,
+    waveLength: 64,
+    dashLength: 14,
+    dashGap: 10,
     ...overrides,
     radialCenter: { x: 0.5, y: 0.5, ...(overrides.radialCenter || {}) },
     palette: overrides.palette ? [...overrides.palette] : [...PALETTE],
@@ -181,5 +189,112 @@ export const PRESETS = [
     dotColor: '#1a1a1a',
   }),
 ]
+
+function linePreset(id, name, overrides) {
+  return preset(id, name, { category: 'lines', ...overrides })
+}
+
+export const LINE_PRESETS = [
+  linePreset('line-fine-grid', '细网格', {
+    lineType: 'grid',
+    spacing: 12,
+    lineWidth: 0.8,
+    angle: 0,
+    dotColor: '#222222',
+  }),
+  linePreset('line-thick-grid', '粗网格', {
+    lineType: 'grid',
+    spacing: 36,
+    lineWidth: 5,
+    angle: 0,
+    dotColor: '#1a1a1a',
+  }),
+  linePreset('line-diagonal', '45°斜线', {
+    lineType: 'parallel',
+    spacing: 16,
+    lineWidth: 1.5,
+    angle: 45,
+    dotColor: '#1a1a1a',
+  }),
+  linePreset('line-cross', '斜向交叉', {
+    lineType: 'diag',
+    spacing: 20,
+    lineWidth: 1.2,
+    angle: 0,
+    dotColor: '#243044',
+  }),
+  linePreset('line-horizontal', '横线条纹', {
+    lineType: 'horizontal',
+    spacing: 26,
+    lineWidth: 10,
+    angle: 0,
+    colorMode: 'dual',
+    dotColor: '#1d3557',
+    transparent: false,
+    backgroundColor: '#f4f1ea',
+  }),
+  linePreset('line-vertical', '竖线条纹', {
+    lineType: 'vertical',
+    spacing: 22,
+    lineWidth: 7,
+    angle: 0,
+    colorMode: 'dual',
+    dotColor: '#9b2226',
+    transparent: false,
+    backgroundColor: '#f8f4ef',
+  }),
+  linePreset('line-rays', '放射线', {
+    lineType: 'radial',
+    spacing: 16,
+    lineWidth: 1.2,
+    rayCount: 24,
+    angle: 0,
+    radialCenter: { x: 0.5, y: 0.5 },
+    dotColor: '#1a1a1a',
+  }),
+  linePreset('line-rings', '同心圆线', {
+    lineType: 'concentric',
+    spacing: 18,
+    lineWidth: 1.4,
+    radialCenter: { x: 0.5, y: 0.5 },
+    dotColor: '#1a1a1a',
+  }),
+  linePreset('line-spiral', '螺旋线', {
+    lineType: 'spiral',
+    spacing: 16,
+    lineWidth: 1.6,
+    angle: 0,
+    dotColor: '#1a1a1a',
+  }),
+  linePreset('line-wave', '波浪纹', {
+    lineType: 'wave',
+    spacing: 24,
+    lineWidth: 1.5,
+    angle: 0,
+    waveAmplitude: 8,
+    waveLength: 64,
+    dotColor: '#1d4e89',
+  }),
+  linePreset('line-dashed', '虚线斜纹', {
+    lineType: 'dashed',
+    spacing: 18,
+    lineWidth: 1.6,
+    angle: 45,
+    dashLength: 14,
+    dashGap: 10,
+    dotColor: '#1a1a1a',
+  }),
+  linePreset('line-sparse', '疏线网格', {
+    lineType: 'grid',
+    spacing: 72,
+    lineWidth: 1,
+    angle: 0,
+    dotColor: '#1d3557',
+  }),
+]
+
+export const DOT_PRESETS = [...PRESETS]
+
+PRESETS.push(...LINE_PRESETS)
 
 export const PRESET_MAP = Object.fromEntries(PRESETS.map((item) => [item.id, item]))
