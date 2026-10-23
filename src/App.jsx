@@ -68,6 +68,15 @@ export default function App() {
 
   const picture = useMemo(() => generatePicture(params, mask), [params, mask])
   const svg = useMemo(() => toSvgString(picture), [picture])
+  const [tuning, setTuning] = useState(false)
+  const category = params.category || 'dots'
+  const presetName = PRESETS.find((item) => item.id === presetId)?.name || ''
+  const markCount = category === 'lines' ? picture.strokes.length : picture.dots.length
+
+  useEffect(() => {
+    const title = category === 'lines' ? '线纹图案生成器' : '波点图案生成器'
+    document.title = presetName ? `${title} · ${presetName}` : title
+  }, [category, presetName])
 
   useEffect(() => {
     if (!import.meta.env.DEV) return
@@ -162,12 +171,15 @@ export default function App() {
   function beginGesture() {
     if (gestureRef.current) return
     gestureRef.current = snapshot()
+    setTuning(true)
   }
 
   function endGesture() {
     const start = gestureRef.current
     gestureRef.current = null
-    if (!start || sameState(start, snapshot())) return
+    if (!start) return
+    setTuning(false)
+    if (sameState(start, snapshot())) return
     pushUndo(start)
   }
 
@@ -260,8 +272,10 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" data-category={category} data-preset={presetId}>
       <TopBar
+        category={category}
+        presetName={presetName}
         canUndo={history.undo.length > 0}
         canRedo={history.redo.length > 0}
         onUndo={undo}
@@ -271,7 +285,7 @@ export default function App() {
       />
       <div className="workspace">
       <PresetRail
-        category={params.category || 'dots'}
+        category={category}
         presetId={presetId}
         onPreset={applyPreset}
         onCategory={applyCategory}
@@ -279,6 +293,10 @@ export default function App() {
       <Preview
         svg={svg}
         picture={picture}
+        category={category}
+        presetName={presetName}
+        countLabel={`${markCount} ${category === 'lines' ? '条线' : '个点'}`}
+        tuning={tuning}
         movable={
           (params.category === 'lines' && (params.lineType === 'radial' || params.lineType === 'concentric')) ||
           (params.category !== 'lines' && params.sizeMode === 'radial')
@@ -292,7 +310,8 @@ export default function App() {
       />
       <Inspector
         params={params}
-        dotCount={params.category === 'lines' ? picture.strokes.length : picture.dots.length}
+        presetName={presetName}
+        dotCount={markCount}
         onCommit={commitEdit}
         onPreview={update}
         onGestureStart={beginGesture}

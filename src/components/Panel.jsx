@@ -1,80 +1,106 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PRESETS } from '../lib/presets.js'
+import {
+  ArrangementIcon,
+  IconArrangeGrid,
+  IconArrangePoisson,
+  IconArrangeRadial,
+  IconArrangeRotated,
+  IconArrangeSpiral,
+  IconArrangeStaggered,
+  IconChevron,
+  IconColorDual,
+  IconColorPalette,
+  IconColorSingle,
+  IconDice,
+  IconDots,
+  IconExportPng,
+  IconExportSvg,
+  IconLineConcentric,
+  IconLineDashed,
+  IconLineDiag,
+  IconLineGrid,
+  IconLineHorizontal,
+  IconLineParallel,
+  IconLineRadial,
+  IconLineSpiral,
+  IconLineVertical,
+  IconLineWave,
+  IconLines,
+  IconPlus,
+  IconRedo,
+  IconShapeCircle,
+  IconShapeEllipse,
+  IconShapeHeart,
+  IconShapeRing,
+  IconShapeSquare,
+  IconShapeStar,
+  IconSizeFixed,
+  IconSizeLinear,
+  IconSizeMask,
+  IconSizeRadial,
+  IconSizeRandom,
+  IconUndo,
+  IconUpload,
+  LineTypeIcon,
+} from './icons.jsx'
 
 const ARRANGEMENTS = [
-  { value: 'grid', label: '正网格' },
-  { value: 'staggered', label: '错位网格' },
-  { value: 'rotated', label: '旋转网格' },
-  { value: 'poisson', label: '随机散布' },
-  { value: 'radial', label: '径向同心' },
-  { value: 'spiral', label: '螺旋' },
+  { value: 'grid', label: '正网格', Icon: IconArrangeGrid },
+  { value: 'staggered', label: '错位网格', Icon: IconArrangeStaggered },
+  { value: 'rotated', label: '旋转网格', Icon: IconArrangeRotated },
+  { value: 'poisson', label: '随机散布', Icon: IconArrangePoisson },
+  { value: 'radial', label: '径向同心', Icon: IconArrangeRadial },
+  { value: 'spiral', label: '螺旋', Icon: IconArrangeSpiral },
 ]
 
 const SIZE_MODES = [
-  { value: 'fixed', label: '固定' },
-  { value: 'linear', label: '线性渐变' },
-  { value: 'radial', label: '径向渐变' },
-  { value: 'random', label: '随机' },
-  { value: 'mask', label: '按蒙版图形' },
+  { value: 'fixed', label: '固定', Icon: IconSizeFixed },
+  { value: 'linear', label: '线性渐变', Icon: IconSizeLinear },
+  { value: 'radial', label: '径向渐变', Icon: IconSizeRadial },
+  { value: 'random', label: '随机', Icon: IconSizeRandom },
+  { value: 'mask', label: '按蒙版图形', Icon: IconSizeMask },
 ]
 
 const SHAPES = [
-  { value: 'circle', label: '圆' },
-  { value: 'ring', label: '圆环' },
-  { value: 'ellipse', label: '椭圆' },
-  { value: 'star', label: '星形' },
-  { value: 'square', label: '方块' },
-  { value: 'heart', label: '心形' },
+  { value: 'circle', label: '圆', Icon: IconShapeCircle },
+  { value: 'ring', label: '圆环', Icon: IconShapeRing },
+  { value: 'ellipse', label: '椭圆', Icon: IconShapeEllipse },
+  { value: 'star', label: '星形', Icon: IconShapeStar },
+  { value: 'square', label: '方块', Icon: IconShapeSquare },
+  { value: 'heart', label: '心形', Icon: IconShapeHeart },
 ]
 
 const LINE_TYPES = [
-  { value: 'grid', label: '正网格' },
-  { value: 'diag', label: '斜网格' },
-  { value: 'parallel', label: '平行斜线' },
-  { value: 'horizontal', label: '横线' },
-  { value: 'vertical', label: '竖线' },
-  { value: 'radial', label: '放射线' },
-  { value: 'concentric', label: '同心圆' },
-  { value: 'spiral', label: '螺旋线' },
-  { value: 'wave', label: '波浪线' },
-  { value: 'dashed', label: '虚线' },
+  { value: 'grid', label: '正网格', Icon: IconLineGrid },
+  { value: 'diag', label: '斜网格', Icon: IconLineDiag },
+  { value: 'parallel', label: '平行斜线', Icon: IconLineParallel },
+  { value: 'horizontal', label: '横线', Icon: IconLineHorizontal },
+  { value: 'vertical', label: '竖线', Icon: IconLineVertical },
+  { value: 'radial', label: '放射线', Icon: IconLineRadial },
+  { value: 'concentric', label: '同心圆', Icon: IconLineConcentric },
+  { value: 'spiral', label: '螺旋线', Icon: IconLineSpiral },
+  { value: 'wave', label: '波浪线', Icon: IconLineWave },
+  { value: 'dashed', label: '虚线', Icon: IconLineDashed },
 ]
 
 const COLOR_MODES = [
-  { value: 'single', label: '单色' },
-  { value: 'dual', label: '双色' },
-  { value: 'palette', label: '多色调色板' },
+  { value: 'single', label: '单色', Icon: IconColorSingle },
+  { value: 'dual', label: '双色', Icon: IconColorDual },
+  { value: 'palette', label: '多色调色板', Icon: IconColorPalette },
 ]
 
-function Icon({ children }) {
-  return (
-    <svg className="icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-      {children}
-    </svg>
-  )
-}
-
-function Chevron({ open }) {
-  return (
-    <Icon>
-      <path
-        d={open ? 'M4 6l4 4 4-4' : 'M6 4l4 4-4 4'}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Icon>
-  )
-}
+const MASK_SOURCES = [
+  { value: 'star', label: '内置星星', Icon: IconShapeStar },
+  { value: 'upload', label: '上传图片', Icon: IconUpload },
+]
 
 function Group({ title, children }) {
   const [open, setOpen] = useState(true)
   return (
     <section className={open ? 'group open' : 'group'}>
       <button type="button" className="group-head" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        <Chevron open={open} />
+        <IconChevron open={open} />
         <span>{title}</span>
       </button>
       {open && <div className="group-body">{children}</div>}
@@ -83,19 +109,33 @@ function Group({ title, children }) {
 }
 
 function Slider({ id, label, min, max, step, value, onPreview, onGestureStart, onGestureEnd, suffix = '' }) {
+  const [editing, setEditing] = useState(false)
+
   function commit(raw) {
     const next = Number(raw)
     if (!Number.isFinite(next)) return
     onPreview(Math.min(max, Math.max(min, next)))
   }
 
-  function startGesture(event) {
-    if (event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
+  function beginEdit() {
+    setEditing(true)
     onGestureStart()
   }
 
+  function startGesture(event) {
+    if (event.pointerId != null && event.currentTarget.setPointerCapture) {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    }
+    beginEdit()
+  }
+
+  function stopGesture() {
+    setEditing(false)
+    onGestureEnd()
+  }
+
   return (
-    <div className="row">
+    <div className={editing ? 'row is-editing' : 'row'}>
       <label htmlFor={id}>{label}</label>
       <div className="row-control">
         <input
@@ -106,10 +146,10 @@ function Slider({ id, label, min, max, step, value, onPreview, onGestureStart, o
           step={step}
           value={value}
           onPointerDown={startGesture}
-          onPointerUp={onGestureEnd}
-          onPointerCancel={onGestureEnd}
-          onKeyDown={onGestureStart}
-          onKeyUp={onGestureEnd}
+          onPointerUp={stopGesture}
+          onPointerCancel={stopGesture}
+          onKeyDown={startGesture}
+          onKeyUp={stopGesture}
           onChange={(event) => commit(event.target.value)}
         />
         <span className="num-wrap">
@@ -120,9 +160,9 @@ function Slider({ id, label, min, max, step, value, onPreview, onGestureStart, o
             step={step}
             value={value}
             aria-label={`${label}数值`}
-            onFocus={onGestureStart}
-            onPointerDown={onGestureStart}
-            onBlur={onGestureEnd}
+            onFocus={beginEdit}
+            onPointerDown={beginEdit}
+            onBlur={stopGesture}
             onChange={(event) => commit(event.target.value)}
           />
           {suffix && <span className="suffix">{suffix}</span>}
@@ -133,8 +173,20 @@ function Slider({ id, label, min, max, step, value, onPreview, onGestureStart, o
 }
 
 function NumberField({ id, label, min, max, value, onPreview, onGestureStart, onGestureEnd, parse }) {
+  const [editing, setEditing] = useState(false)
+
+  function startGesture() {
+    setEditing(true)
+    onGestureStart()
+  }
+
+  function stopGesture() {
+    setEditing(false)
+    onGestureEnd()
+  }
+
   return (
-    <div className="row">
+    <div className={editing ? 'row is-editing' : 'row'}>
       <label htmlFor={id}>{label}</label>
       <input
         id={id}
@@ -143,9 +195,9 @@ function NumberField({ id, label, min, max, value, onPreview, onGestureStart, on
         min={min}
         max={max}
         value={value}
-        onFocus={onGestureStart}
-        onPointerDown={onGestureStart}
-        onBlur={onGestureEnd}
+        onFocus={startGesture}
+        onPointerDown={startGesture}
+        onBlur={stopGesture}
         onChange={(event) => onPreview(parse(event.target.value))}
       />
     </div>
@@ -155,21 +207,24 @@ function NumberField({ id, label, min, max, value, onPreview, onGestureStart, on
 function Segment({ label, value, options, onChange, columns = 3 }) {
   return (
     <div className="segment-block">
-      <span className="sr-only">{label}</span>
-      <div className="segment" role="radiogroup" aria-label={label} style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
-        {options.map((option) => (
-          <button
-            type="button"
-            key={option.value}
-            role="radio"
-            aria-checked={value === option.value}
-            className={value === option.value ? 'on' : ''}
-            data-value={option.value}
-            onClick={() => onChange(option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
+      <div className="segment" role="radiogroup" aria-label={label} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+        {options.map((option) => {
+          const Glyph = option.Icon
+          return (
+            <button
+              type="button"
+              key={option.value}
+              role="radio"
+              aria-checked={value === option.value}
+              className={value === option.value ? 'on' : ''}
+              data-value={option.value}
+              onClick={() => onChange(option.value)}
+            >
+              {Glyph && <Glyph />}
+              <span>{option.label}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -185,51 +240,60 @@ function Check({ id, label, checked, onCommit }) {
 }
 
 function ColorField({ id, label, value, onPreview, onGestureStart, onGestureEnd }) {
+  const [editing, setEditing] = useState(false)
+
+  function startGesture() {
+    setEditing(true)
+    onGestureStart()
+  }
+
+  function stopGesture() {
+    setEditing(false)
+    onGestureEnd()
+  }
+
   return (
-    <label className="row color-row" htmlFor={id}>
+    <label className={editing ? 'row color-row is-editing' : 'row color-row'} htmlFor={id}>
       <span>{label}</span>
       <input
         id={id}
         type="color"
         value={value}
-        onFocus={onGestureStart}
-        onBlur={onGestureEnd}
+        onFocus={startGesture}
+        onBlur={stopGesture}
         onChange={(event) => onPreview(event.target.value)}
       />
     </label>
   )
 }
 
-export function TopBar({ canUndo, canRedo, onUndo, onRedo, onExportPng, onExportSvg }) {
+export function TopBar({ category, presetName, canUndo, canRedo, onUndo, onRedo, onExportPng, onExportSvg }) {
+  const lines = category === 'lines'
   return (
     <header className="topbar">
       <div className="file-title">
-        <Icon>
-          <circle cx="8" cy="8" r="3.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
-        </Icon>
-        <h1>波点图案生成器</h1>
+        <span className="brand-mark">{lines ? <IconLines /> : <IconDots />}</span>
+        <h1>{lines ? '线纹图案生成器' : '波点图案生成器'}</h1>
+        <span className="title-sep" aria-hidden="true">/</span>
+        <span className="title-preset" title={presetName}>{presetName}</span>
       </div>
       <div className="topbar-history">
         <button type="button" id="undo" onClick={onUndo} disabled={!canUndo} title="撤回（Ctrl+Z）">
-          <Icon>
-            <path d="M6.5 6.5H3.5V3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M3.8 6.4A4.5 4.5 0 1 1 4.6 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </Icon>
+          <IconUndo />
           撤回
         </button>
         <button type="button" id="redo" onClick={onRedo} disabled={!canRedo} title="重做（Ctrl+Shift+Z）">
-          <Icon>
-            <path d="M9.5 6.5h3v-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M12.2 6.4A4.5 4.5 0 1 0 11.4 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </Icon>
+          <IconRedo />
           重做
         </button>
       </div>
       <div className="topbar-export">
         <button type="button" id="export-svg" onClick={onExportSvg}>
+          <IconExportSvg />
           导出 SVG
         </button>
         <button type="button" id="export-png" onClick={onExportPng}>
+          <IconExportPng />
           导出 PNG
         </button>
       </div>
@@ -238,33 +302,45 @@ export function TopBar({ canUndo, canRedo, onUndo, onRedo, onExportPng, onExport
 }
 
 export function PresetRail({ category, presetId, onPreset, onCategory }) {
+  const listRef = useRef(null)
   const list = PRESETS.filter((preset) => (preset.params.category || 'dots') === category)
+  const lines = category === 'lines'
+
+  useEffect(() => {
+    const selected = listRef.current?.querySelector(`[data-preset="${presetId}"]`)
+    selected?.scrollIntoView({ block: 'nearest' })
+  }, [presetId, category])
+
   return (
     <aside className="rail">
-      <div className="category-switch" role="radiogroup" aria-label="类别">
-        <button
-          type="button"
-          id="category-dots"
-          role="radio"
-          aria-checked={category === 'dots'}
-          className={category === 'dots' ? 'on' : ''}
-          onClick={() => onCategory('dots')}
-        >
-          波点
-        </button>
-        <button
-          type="button"
-          id="category-lines"
-          role="radio"
-          aria-checked={category === 'lines'}
-          className={category === 'lines' ? 'on' : ''}
-          onClick={() => onCategory('lines')}
-        >
-          线纹
-        </button>
+      <div className="rail-sticky">
+        <div className="category-switch" role="radiogroup" aria-label="类别">
+          <button
+            type="button"
+            id="category-dots"
+            role="radio"
+            aria-checked={category === 'dots'}
+            className={category === 'dots' ? 'on' : ''}
+            onClick={() => onCategory('dots')}
+          >
+            <IconDots />
+            <span>波点</span>
+          </button>
+          <button
+            type="button"
+            id="category-lines"
+            role="radio"
+            aria-checked={category === 'lines'}
+            className={category === 'lines' ? 'on' : ''}
+            onClick={() => onCategory('lines')}
+          >
+            <IconLines />
+            <span>线纹</span>
+          </button>
+        </div>
       </div>
       <h2>预设</h2>
-      <div className="preset-list">
+      <div className="preset-list" ref={listRef} key={category}>
         {list.map((preset) => (
           <button
             type="button"
@@ -274,7 +350,10 @@ export function PresetRail({ category, presetId, onPreset, onCategory }) {
             className={presetId === preset.id ? 'on' : ''}
             onClick={() => onPreset(preset.id)}
           >
-            {preset.name}
+            <span className="preset-glyph">
+              {lines ? <LineTypeIcon type={preset.params.lineType} /> : <ArrangementIcon type={preset.params.arrangement} />}
+            </span>
+            <span className="preset-name">{preset.name}</span>
           </button>
         ))}
       </div>
@@ -282,12 +361,17 @@ export function PresetRail({ category, presetId, onPreset, onCategory }) {
   )
 }
 
-export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStart, onGestureEnd, onRandomize, onUpload }) {
+export function Inspector({ params, presetName, dotCount, onCommit, onPreview, onGestureStart, onGestureEnd, onRandomize, onUpload }) {
   const lines = params.category === 'lines'
   const colorLabel = params.invert ? '底色' : lines ? '线颜色' : '点颜色'
 
   return (
     <aside className="inspector">
+      <div className="inspector-summary">
+        <span className="summary-mark">{lines ? <IconLines /> : <IconDots />}</span>
+        <span className="summary-name" title={presetName}>{presetName}</span>
+        <span className="summary-kind">{lines ? '线纹' : '波点'}</span>
+      </div>
       <Group title="画布">
         <NumberField
           id="canvas-width"
@@ -326,6 +410,7 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
           parse={(raw) => Number(raw) || 1}
         />
         <button type="button" id="randomize" onClick={onRandomize}>
+          <IconDice />
           随机一下
         </button>
         <p className="hint">
@@ -378,9 +463,9 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
               onGestureEnd={onGestureEnd}
             />
           )}
-          {params.lineType === 'radial' && (
+              {params.lineType === 'radial' && (
             <>
-              <p className="hint">在画布上拖动中心。</p>
+              <p className="hint">拖动预览移动中心。</p>
               <Slider
                 id="ray-count"
                 label="条数"
@@ -394,7 +479,7 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
               />
             </>
           )}
-          {params.lineType === 'concentric' && <p className="hint">在画布上拖动中心。</p>}
+          {params.lineType === 'concentric' && <p className="hint">拖动预览移动中心。</p>}
           {params.lineType === 'wave' && (
             <>
               <Slider
@@ -509,7 +594,7 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
         )}
         {params.sizeMode === 'radial' && (
           <>
-            <p className="hint">在画布上拖动圆心。</p>
+            <p className="hint">拖动预览移动中心。</p>
             <Slider
               id="radial-radius"
               label="渐变半径"
@@ -538,13 +623,11 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
               label="蒙版来源"
               columns={2}
               value={params.maskSource}
-              options={[
-                { value: 'star', label: '内置星星' },
-                { value: 'upload', label: '上传图片' },
-              ]}
+              options={MASK_SOURCES}
               onChange={(maskSource) => onCommit({ maskSource })}
             />
             <label className="file" htmlFor="mask-file">
+              <IconUpload />
               选择黑白图片
               <input
                 id="mask-file"
@@ -631,6 +714,7 @@ export function Inspector({ params, dotCount, onCommit, onPreview, onGestureStar
               ))}
               {params.palette.length < 8 && (
                 <button type="button" className="text-btn" onClick={() => onCommit({ palette: [...params.palette, '#888888'] })}>
+                  <IconPlus />
                   添加颜色
                 </button>
               )}
