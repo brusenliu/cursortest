@@ -1,4 +1,23 @@
-export default function Preview({ svg, picture, movable, showGuide, center, radius, onCenter, onPositionStart, onPositionEnd }) {
+import { useState } from 'react'
+import { IconDots, IconLines } from './icons.jsx'
+
+export default function Preview({
+  svg,
+  picture,
+  movable,
+  showGuide,
+  center,
+  radius,
+  category,
+  presetName,
+  countLabel,
+  tuning,
+  onCenter,
+  onPositionStart,
+  onPositionEnd,
+}) {
+  const [dragging, setDragging] = useState(false)
+  const lines = category === 'lines'
   function pointFromEvent(event) {
     const rect = event.currentTarget.getBoundingClientRect()
     const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
@@ -10,12 +29,14 @@ export default function Preview({ svg, picture, movable, showGuide, center, radi
   }
 
   function finishGesture() {
+    setDragging(false)
     onPositionEnd?.()
   }
 
   function onPointerDown(event) {
     if (!movable || event.button !== 0) return
     event.currentTarget.setPointerCapture(event.pointerId)
+    setDragging(true)
     onPositionStart?.()
     onCenter(pointFromEvent(event))
   }
@@ -43,10 +64,29 @@ export default function Preview({ svg, picture, movable, showGuide, center, radi
     onPositionEnd?.()
   }
 
+  const stageClass = [
+    'stage',
+    movable ? 'is-radial' : '',
+    dragging ? 'is-dragging' : '',
+    tuning && !dragging ? 'is-live' : '',
+  ].filter(Boolean).join(' ')
+
   return (
     <main className="stage-wrap">
+      <div className="stage-frame" key={`${category}:${presetName}`}>
+      <div className="stage-meta">
+        <p className="stage-path" aria-live="polite">
+          {lines ? <IconLines /> : <IconDots />}
+          <span>{lines ? '线纹' : '波点'}</span>
+          <span className="stage-sep" aria-hidden="true">/</span>
+          <span className="stage-name">{presetName}</span>
+        </p>
+        <p className={movable ? 'stage-aside is-hint' : 'stage-aside'}>
+          {dragging ? '正在移动中心' : movable ? `拖动预览移动中心 · ${countLabel}` : countLabel}
+        </p>
+      </div>
       <div
-        className={`stage${movable ? ' is-radial' : ''}`}
+        className={stageClass}
         style={{ aspectRatio: `${picture.width} / ${picture.height}` }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -65,7 +105,7 @@ export default function Preview({ svg, picture, movable, showGuide, center, radi
               r={radius}
               fill="none"
               stroke="#0d99ff"
-              strokeWidth="1.5"
+              strokeWidth={dragging ? 2.25 : 1.5}
               strokeDasharray="5 4"
             />
           </svg>
@@ -77,6 +117,7 @@ export default function Preview({ svg, picture, movable, showGuide, center, radi
             aria-hidden="true"
           />
         )}
+      </div>
       </div>
     </main>
   )
