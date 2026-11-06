@@ -81,6 +81,56 @@ def _num(value) -> float | None:
         return None
 
 
+def _remember_row(result: dict[str, dict], symbol: str, row: dict) -> None:
+    result[symbol] = row
+    code = str(row.get("f12") or "")
+    if code:
+        result[code] = row
+        result[code.replace(".", "_")] = row
+        result[code.replace("_", ".")] = row
+
+
+async def _fetch_one(client: httpx.AsyncClient, secid: str) -> tuple[str, dict] | None:
+    response = await client.get(
+        "https://push2.eastmoney.com/api/qt/stock/get",
+        params={"invt": 2, "fltt": 2, "secid": secid, "fields": "f57,f58,f43,f170"},
+        timeout=15,
+    )
+    response.raise_for_status()
+    data = (response.json() or {}).get("data") or {}
+    if data.get("f43") is None:
+        return None
+    symbol = secid.split(".", 1)[1]
+    row = {
+        "f12": str(data.get("f57") or symbol),
+        "f14": data.get("f58") or symbol,
+        "f2": data.get("f43"),
+        "f3": data.get("f170"),
+    }
+    return symbol, row
+
+
+async def _fetch_singles(client: httpx.AsyncClient, secids: str) -> dict[str, dict]:
+    """Batch ulist is often 502 from this host. Per-symbol quotes still succeed."""
+    symbols = [part for part in secids.split(",") if part]
+    semaphore = asyncio.Semaphore(4)
+
+    async def run(secid: str) -> tuple[str, dict] | None:
+        async with semaphore:
+            try:
+                return await _fetch_one(client, secid)
+            except Exception as exc:
+                log.info("single quote %s failed: %s", secid, exc)
+                return None
+
+    pairs = await asyncio.gather(*(run(secid) for secid in symbols))
+    result: dict[str, dict] = {}
+    for item in pairs:
+        if item:
+            _remember_row(result, item[0], item[1])
+    return result
+
+
 async def _fetch_ulist(client: httpx.AsyncClient, secids: str) -> dict[str, dict]:
     params = {"fltt": 2, "fields": "f12,f14,f2,f3,f4", "secids": secids}
     hosts = (
@@ -89,16 +139,20 @@ async def _fetch_ulist(client: httpx.AsyncClient, secids: str) -> dict[str, dict
     )
     last_error: Exception | None = None
     for host in hosts:
-        for attempt in range(2):
-            try:
-                response = await client.get(host, params=params, timeout=20)
-                response.raise_for_status()
-                payload = response.json()
-                rows = ((payload.get("data") or {}).get("diff")) or []
+        try:
+            response = await client.get(host, params=params, timeout=12)
+            response.raise_for_status()
+            payload = response.json()
+            rows = ((payload.get("data") or {}).get("diff")) or []
+            if rows:
                 return {str(row.get("f12")): row for row in rows}
-            except Exception as exc:
-                last_error = exc
-                await asyncio.sleep(0.4 * (attempt + 1))
+            last_error = RuntimeError(f"empty quote list from {host}")
+        except Exception as exc:
+            last_error = exc
+            log.info("batch quotes failed via %s: %s", host, exc)
+    singles = await _fetch_singles(client, secids)
+    if singles:
+        return singles
     assert last_error is not None
     raise last_error
 
